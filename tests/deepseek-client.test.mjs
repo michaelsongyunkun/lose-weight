@@ -58,6 +58,22 @@ test("buildDeepSeekPayload requests JSON output from DeepSeek", () => {
   assert.equal(payload.max_tokens, 9000);
 });
 
+test("buildCookingSystemPrompt does not invent body metrics when omitted", () => {
+  const prompt = buildCookingSystemPrompt({
+    days: 7,
+    familySize: 2,
+    targetCalories: 1500,
+    goal: "减脂",
+    cuisine: "中式"
+  });
+
+  assert.doesNotMatch(prompt, /主用户身高/);
+  assert.doesNotMatch(prompt, /主用户体重/);
+  assert.doesNotMatch(prompt, /主用户BMI/);
+  assert.doesNotMatch(prompt, /每日蛋白目标/);
+  assert.match(prompt, /未提供身高体重/);
+});
+
 test("generatePlanWithDeepSeek sends bearer key and normalizes model JSON", async () => {
   const calls = [];
   const plan = await generatePlanWithDeepSeek({

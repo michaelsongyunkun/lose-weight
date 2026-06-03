@@ -9,9 +9,10 @@ test("frontend keeps the core cooking planner form with the output panel", async
   assert.match(html, /id="plannerForm"/);
   assert.match(html, /id="apiKey"/);
   assert.match(html, /id="apiKey"[\s\S]*required/);
-  assert.match(html, /id="heightCm"/);
-  assert.match(html, /id="weightKg"/);
-  assert.match(html, /id="metricBmi"/);
+  assert.doesNotMatch(html, /id="days"/);
+  assert.doesNotMatch(html, /id="heightCm"/);
+  assert.doesNotMatch(html, /id="weightKg"/);
+  assert.doesNotMatch(html, /id="metricBmi"/);
   assert.match(html, /id="resultPanel"/);
   assert.match(html, /id="planTitle"/);
   assert.match(html, /id="weekView"/);
@@ -21,9 +22,11 @@ test("frontend keeps the core cooking planner form with the output panel", async
   assert.match(html, /id="downloadButton"[\s\S]*disabled/);
   assert.match(app, /deepseekApiKey/);
   assert.match(app, /\/api\/plan/);
-  assert.match(app, /heightCm:\s*Number\(data\.get\("heightCm"\)\)/);
-  assert.match(app, /weightKg:\s*Number\(data\.get\("weightKg"\)\)/);
-  assert.match(app, /updateBmi/);
+  assert.match(app, /days:\s*7/);
+  assert.doesNotMatch(app, /data\.get\("days"\)/);
+  assert.doesNotMatch(app, /heightCm:\s*Number\(data\.get\("heightCm"\)\)/);
+  assert.doesNotMatch(app, /weightKg:\s*Number\(data\.get\("weightKg"\)\)/);
+  assert.doesNotMatch(app, /updateBmi/);
 });
 
 test("sidebar menu keeps home first, planning second, and menu library third", async () => {
@@ -147,6 +150,26 @@ test("menu library screen loads the recipe RAG index", async () => {
   assert.match(app, /data-menu-ingredient/);
   assert.match(css, /\.recipe-grid/);
   assert.match(css, /\.recipe-card/);
+});
+
+test("sidebar menu exposes ingredient nutrition as the fourth RAG screen", async () => {
+  const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+  const rag = JSON.parse(await readFile(new URL("../public/data/ingredient-nutrition-rag.json", import.meta.url), "utf8"));
+  const menuLibraryItemIndex = html.indexOf('data-screen="menuLibraryScreen"');
+  const nutritionItemIndex = html.indexOf('data-screen="ingredientNutritionScreen"');
+
+  assert.equal(rag.itemCount, 13693);
+  assert.ok(nutritionItemIndex > menuLibraryItemIndex, "ingredient nutrition follows menu library");
+  assert.match(html, /<span>04<\/span>[\s\S]*<strong>食材营养<\/strong>/);
+  assert.match(html, /id="ingredientNutritionScreen"/);
+  assert.match(html, /id="ingredientNutritionGrid"/);
+  assert.match(html, /id="ingredientNutritionSearchInput"/);
+  assert.match(app, /NUTRITION_INDEX_URL/);
+  assert.match(app, /function renderIngredientNutrition/);
+  assert.match(css, /\.ingredient-nutrition-screen/);
+  assert.match(css, /\.nutrition-food-grid/);
 });
 
 test("menu library does not expose source file or FDC match rows", async () => {

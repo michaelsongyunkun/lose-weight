@@ -100,21 +100,33 @@ export const COOKING_AGENT_SYSTEM_PROMPT = `# 中式家庭减脂备餐规划师
 5. **输出严格性**：完整输出JSON，禁止添加文字说明或解释，所有字段（如calories、amount）均需为整数/明确数值。`;
 
 export const COOKING_AGENT_RUNTIME_RULES = `## 【项目运行约束】
-1. 必须根据身高、体重、BMI 与蛋白目标调整每日餐食结构，不要只按固定模板出餐。
+1. 必须根据本次用户提供的目标、热量、家庭人数、口味、预算、备餐时间和厨房设备调整每日餐食结构；如果用户提供身高、体重、BMI 与蛋白目标，则优先纳入，不要只按固定模板出餐。
 2. 每道菜 steps 至少 5 步，并写清切配形态、调味比例、锅具或设备、火候、时长、熟成判断、分装保存或复热建议。
 3. shoppingList 中每个 name 必须是单一标准食材名，优先使用能命中本地食材营养 RAG 的名称；若常见调味料或必要食材暂未命中 RAG，也必须继续生成并保留该采购项；不要输出“鱼/虾仁”“杂蔬”“优质蛋白”这类组合项或模糊类别。
 4. weeklyPlan.ingredients 只能使用 shoppingList.name 或用户现有食材；调味料也必须来自 shoppingList 或现有食材。
 5. shoppingList 不要包含用户现有食材；若必须补买，只列补买数量。
 6. 严格输出 JSON，不要 Markdown，不要解释，不要 JSON 外文本。`;
 
-export function buildCookingAgentRuntimePrompt(profile, bodyMetrics) {
-  return `${COOKING_AGENT_SYSTEM_PROMPT}
+function renderBodyMetricRuntimeSection(profile, bodyMetrics) {
+  if (!bodyMetrics) {
+    return `## 【本次用户基础约束】
+- 计划天数：${profile.days} 天
+- 家庭人数：${profile.familySize}
+- 每日目标热量：${profile.targetCalories} kcal/成人
+- 未提供身高体重；不要假设 BMI 或按体重估算蛋白目标。`;
+  }
 
-## 【本次用户身体指标】
+  return `## 【本次用户身体指标】
 - 主用户身高：${profile.heightCm} cm
 - 主用户体重：${profile.weightKg} kg
 - 主用户BMI：${bodyMetrics.bmi}（${bodyMetrics.bmiLabel}）
-- 主用户每日蛋白目标：${bodyMetrics.proteinMinG}-${bodyMetrics.proteinMaxG} g（按 1.2-1.6g/kg 估算）
+- 主用户每日蛋白目标：${bodyMetrics.proteinMinG}-${bodyMetrics.proteinMaxG} g（按 1.2-1.6g/kg 估算）`;
+}
+
+export function buildCookingAgentRuntimePrompt(profile, bodyMetrics) {
+  return `${COOKING_AGENT_SYSTEM_PROMPT}
+
+${renderBodyMetricRuntimeSection(profile, bodyMetrics)}
 
 ${COOKING_AGENT_RUNTIME_RULES}`;
 }

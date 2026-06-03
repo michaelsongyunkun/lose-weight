@@ -44,6 +44,12 @@ const mealTemplates = [
 export function buildDemoPlan(profileInput = {}) {
   const { profile } = validateProfile(profileInput);
   const bodyMetrics = calculateBodyMetrics(profile);
+  const summary = bodyMetrics
+    ? `这是无 API Key 时的本地演示计划；已读取主用户 ${profile.heightCm}cm / ${profile.weightKg}kg，BMI ${bodyMetrics.bmi}（${bodyMetrics.bmiLabel}）。连接 DeepSeek 后会按你的身体指标和约束重新生成。`
+    : "这是无 API Key 时的本地演示计划；未提供身高体重，本地演示不会估算 BMI 或按体重生成蛋白目标。连接 DeepSeek 后会按你的目标、热量和厨房约束重新生成。";
+  const proteinGuardrail = bodyMetrics
+    ? `主用户每日蛋白目标约 ${bodyMetrics.proteinMinG}-${bodyMetrics.proteinMaxG}g，正式生成时会按身高、体重和 BMI 调整餐食结构。`
+    : "未提供身高体重时不估算 BMI 或体重蛋白目标；正式生成会按每日热量和高蛋白目标安排餐食结构。";
   const days = Array.from({ length: profile.days }, (_, index) => {
     const template = mealTemplates[index % mealTemplates.length];
     return {
@@ -59,7 +65,7 @@ export function buildDemoPlan(profileInput = {}) {
 
   const normalized = normalizeMealPlan({
     title: `${profile.days} 天家庭减脂备餐演示计划`,
-    summary: `这是无 API Key 时的本地演示计划；已读取主用户 ${profile.heightCm}cm / ${profile.weightKg}kg，BMI ${bodyMetrics.bmi}（${bodyMetrics.bmiLabel}）。连接 DeepSeek 后会按你的身体指标和约束重新生成。`,
+    summary,
     days,
     shoppingList: [
       {
@@ -111,7 +117,7 @@ export function buildDemoPlan(profileInput = {}) {
     ],
     guardrails: [
       "热量和营养为估算值，减脂期间不要极端节食。",
-      `主用户每日蛋白目标约 ${bodyMetrics.proteinMinG}-${bodyMetrics.proteinMaxG}g，正式生成时会按身高、体重和 BMI 调整餐食结构。`,
+      proteinGuardrail,
       "如果家庭成员有疾病、孕期或特殊医学需求，请先咨询专业人士。",
       "每周至少复盘一次饱腹感、体重趋势和执行难度。"
     ]

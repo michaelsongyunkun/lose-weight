@@ -96,3 +96,19 @@ test("buildCookingPrompt asks DeepSeek for strict Chinese JSON meal prep output"
   assert.match(prompt, /每道菜 ingredients 只能使用采购清单 name 或现有食材中的食材/);
   assert.match(prompt, /禁止使用“优质蛋白 1 份”/);
 });
+
+test("buildCookingPrompt does not invent body metrics when height and weight are omitted", () => {
+  const prompt = buildCookingPrompt({
+    familySize: 2,
+    targetCalories: 1500,
+    goal: "减脂，高蛋白",
+    cuisine: "中式家常"
+  });
+
+  assert.match(prompt, /7 天/);
+  assert.doesNotMatch(prompt, /主用户身高/);
+  assert.doesNotMatch(prompt, /主用户体重/);
+  assert.doesNotMatch(prompt, /主用户 BMI/);
+  assert.doesNotMatch(prompt, /每日蛋白目标/);
+  assert.doesNotMatch(prompt, /身高、体重、BMI/);
+});

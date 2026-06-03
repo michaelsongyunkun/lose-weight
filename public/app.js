@@ -4,6 +4,7 @@ const LOCAL_APP_ORIGINS = new Set([LOCAL_APP_ORIGIN, "http://localhost:4317"]);
 const NUTRITION_INDEX_URL = appUrl("/data/ingredient-nutrition-rag.json");
 const MENU_LIBRARY_URL = appUrl("/data/menu-library-rag.json");
 const MENU_RENDER_LIMIT = 48;
+const NUTRITION_RENDER_LIMIT = 60;
 const NUTRIENT_DISPLAY_FIELDS = [
   ["energyKcal", "能量"],
   ["proteinG", "蛋白"],
@@ -71,6 +72,13 @@ const menuLibraryCount = document.querySelector("#menuLibraryCount");
 const menuLibraryShown = document.querySelector("#menuLibraryShown");
 const menuLibraryStatus = document.querySelector("#menuLibraryStatus");
 const menuClearFilters = document.querySelector("#menuClearFilters");
+const ingredientNutritionSearchInput = document.querySelector("#ingredientNutritionSearchInput");
+const ingredientNutritionSortSelect = document.querySelector("#ingredientNutritionSortSelect");
+const ingredientNutritionGrid = document.querySelector("#ingredientNutritionGrid");
+const ingredientNutritionCount = document.querySelector("#ingredientNutritionCount");
+const ingredientNutritionShown = document.querySelector("#ingredientNutritionShown");
+const ingredientNutritionStatus = document.querySelector("#ingredientNutritionStatus");
+const ingredientNutritionClear = document.querySelector("#ingredientNutritionClear");
 
 let currentPlan = null;
 let currentMarkdown = "";
@@ -86,6 +94,7 @@ renderEmpty();
 bindMetricMirrors();
 bindScreenNavigation();
 bindMenuLibraryControls();
+bindIngredientNutritionControls();
 loadNutritionIndex().catch(() => {});
 loadAgentPanel().catch(() => {
   if (agentPromptPreview) {
@@ -158,6 +167,9 @@ function switchScreen(screenId) {
 
   if (screenId === "menuLibraryScreen") {
     ensureMenuLibraryLoaded();
+  }
+  if (screenId === "ingredientNutritionScreen") {
+    ensureIngredientNutritionLoaded();
   }
 }
 
@@ -313,6 +325,99 @@ function setMenuLibraryStatus(text) {
   }
 }
 
+function bindIngredientNutritionControls() {
+  ingredientNutritionSearchInput?.addEventListener("input", renderIngredientNutrition);
+  ingredientNutritionSortSelect?.addEventListener("change", renderIngredientNutrition);
+  ingredientNutritionClear?.addEventListener("click", () => {
+    if (ingredientNutritionSearchInput) ingredientNutritionSearchInput.value = "";
+    if (ingredientNutritionSortSelect) ingredientNutritionSortSelect.value = "";
+    renderIngredientNutrition();
+  });
+}
+
+async function ensureIngredientNutritionLoaded() {
+  if (nutritionIndex) {
+    renderIngredientNutrition();
+    return;
+  }
+  if (!ingredientNutritionGrid) return;
+  ingredientNutritionGrid.innerHTML = `<div class="ingredient-nutrition-empty"><strong>正在加载</strong><span>食材营养 RAG 正在读取。</span></div>`;
+  setIngredientNutritionStatus("正在加载食材营养 RAG...");
+  try {
+    const index = await loadNutritionIndex();
+    if (ingredientNutritionCount) {
+      ingredientNutritionCount.textContent = String(index.itemCount || index.items?.length || 0);
+    }
+    renderIngredientNutrition();
+  } catch (error) {
+    setIngredientNutritionStatus(`食材营养 RAG 加载失败：${error.message}`);
+    ingredientNutritionGrid.innerHTML = `<div class="ingredient-nutrition-empty"><strong>加载失败</strong><span>${escapeHtml(error.message)}</span></div>`;
+  }
+}
+
+function renderIngredientNutrition() {
+  if (!nutritionIndex || !ingredientNutritionGrid) return;
+  if (ingredientNutritionCount) {
+    ingredientNutritionCount.textContent = String(nutritionIndex.itemCount || nutritionIndex.items?.length || 0);
+  }
+  const items = filterIngredientNutrition(nutritionIndex.items || []);
+  const visibleItems = items.slice(0, NUTRITION_RENDER_LIMIT);
+  if (ingredientNutritionShown) {
+    ingredientNutritionShown.textContent = String(items.length);
+  }
+  setIngredientNutritionStatus(`${items.length} 项匹配食材${items.length > NUTRITION_RENDER_LIMIT ? `，显示前 ${NUTRITION_RENDER_LIMIT} 项` : ""}`);
+  ingredientNutritionGrid.innerHTML = visibleItems.length
+    ? visibleItems.map(renderIngredientNutritionCard).join("")
+    : `<div class="ingredient-nutrition-empty"><strong>没有匹配食材</strong><span>换一个中文名、英文名或 FDC ID。</span></div>`;
+}
+
+function filterIngredientNutrition(items) {
+  const keyword = (ingredientNutritionSearchInput?.value || "").trim().toLowerCase();
+  const sortKey = ingredientNutritionSortSelect?.value || "";
+  const filtered = items.filter((item) => {
+    if (!keyword) return true;
+    return String(item.searchText || "").includes(keyword) ||
+      String(item.name || "").toLowerCase().includes(keyword) ||
+      String(item.englishName || "").toLowerCase().includes(keyword) ||
+      String(item.fdcId || "").toLowerCase().includes(keyword);
+  });
+  if (!sortKey) {
+    return filtered;
+  }
+  return filtered.slice().sort((a, b) => nutrientSortValue(b, sortKey) - nutrientSortValue(a, sortKey));
+}
+
+function nutrientSortValue(item, key) {
+  const value = Number(item.nutrients?.[key]?.value);
+  return Number.isFinite(value) ? value : -Infinity;
+}
+
+function renderIngredientNutritionCard(item) {
+  const features = (item.features || []).slice(0, 3);
+  return `
+    <article class="nutrition-food-card">
+      <div class="nutrition-food-top">
+        <span>${escapeHtml(String(item.id).padStart(5, "0"))}</span>
+        <div>
+          <strong>${escapeHtml(item.name || item.englishName || "未命名食材")}</strong>
+          <small>${escapeHtml(item.englishName || `FDC ${item.fdcId || ""}`)}</small>
+        </div>
+      </div>
+      <div class="nutrition-food-values">
+        ${NUTRIENT_DISPLAY_FIELDS.map(([key, label]) => renderNutrientValue(item, key, label)).join("")}
+      </div>
+      <p class="nutrition-food-summary">${escapeHtml(features.length ? features.join(" / ") : item.summary || "每克营养值")}</p>
+      <span class="nutrition-food-fdc">FDC ${escapeHtml(item.fdcId || "NA")}</span>
+    </article>
+  `;
+}
+
+function setIngredientNutritionStatus(text) {
+  if (ingredientNutritionStatus) {
+    ingredientNutritionStatus.textContent = text;
+  }
+}
+
 async function requestPlan() {
   const profile = collectProfile();
   const apiKey = apiKeyInput.value.trim();
@@ -406,11 +511,9 @@ function formatRequestError(error) {
 function collectProfile() {
   const data = new FormData(form);
   return {
-    days: Number(data.get("days")),
+    days: 7,
     familySize: Number(data.get("familySize")),
     targetCalories: Number(data.get("targetCalories")),
-    heightCm: Number(data.get("heightCm")),
-    weightKg: Number(data.get("weightKg")),
     goal: data.get("goal"),
     cuisine: data.get("cuisine"),
     allergies: data.get("allergies"),
@@ -917,7 +1020,6 @@ function setLoading(isLoading) {
 
 function bindMetricMirrors() {
   const pairs = [
-    ["days", "metricDays"],
     ["targetCalories", "metricCalories"],
     ["familySize", "metricFamily"]
   ];
@@ -928,18 +1030,6 @@ function bindMetricMirrors() {
       metric.textContent = input.value || "0";
     });
   }
-  const heightInput = document.querySelector("#heightCm");
-  const weightInput = document.querySelector("#weightKg");
-  const bmiMetric = document.querySelector("#metricBmi");
-  const updateBmi = () => {
-    const heightM = Number(heightInput.value) / 100;
-    const weightKg = Number(weightInput.value);
-    const bmi = heightM > 0 && weightKg > 0 ? weightKg / (heightM * heightM) : 0;
-    bmiMetric.textContent = bmi ? Number(bmi.toFixed(1)) : "0";
-  };
-  heightInput.addEventListener("input", updateBmi);
-  weightInput.addEventListener("input", updateBmi);
-  updateBmi();
 }
 
 function escapeHtml(value) {

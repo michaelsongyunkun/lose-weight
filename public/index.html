@@ -30,6 +30,10 @@
             <span>03</span>
             <strong>菜单大全</strong>
           </button>
+          <button class="side-menu-link" type="button" data-screen="ingredientNutritionScreen" aria-controls="ingredientNutritionScreen">
+            <span>04</span>
+            <strong>食材营养</strong>
+          </button>
         </nav>
         <img class="board-art" src="./assets/meal-prep-board.svg" alt="一周备餐看板">
         <div class="metrics-strip" aria-label="默认规划指标">
@@ -44,10 +48,6 @@
           <div>
             <strong id="metricFamily">2</strong>
             <span>人份</span>
-          </div>
-          <div>
-            <strong id="metricBmi">24.2</strong>
-            <span>BMI</span>
           </div>
         </div>
         <div class="privacy-note">
@@ -90,24 +90,12 @@
 
               <div class="form-grid">
                 <label>
-                  <span>计划天数</span>
-                  <input id="days" name="days" type="number" min="1" max="14" value="7">
-                </label>
-                <label>
                   <span>家庭人数</span>
                   <input id="familySize" name="familySize" type="number" min="1" max="8" value="2">
                 </label>
                 <label>
                   <span>每日热量</span>
                   <input id="targetCalories" name="targetCalories" type="number" min="1000" max="3200" step="50" value="1500">
-                </label>
-                <label>
-                  <span>身高 cm</span>
-                  <input id="heightCm" name="heightCm" type="number" min="120" max="230" step="0.5" value="170">
-                </label>
-                <label>
-                  <span>体重 kg</span>
-                  <input id="weightKg" name="weightKg" type="number" min="35" max="220" step="0.1" value="70">
                 </label>
                 <label>
                   <span>预算</span>
@@ -267,6 +255,46 @@
             </section>
 
             <section class="recipe-grid" id="menuRecipeGrid" aria-label="菜单大全列表"></section>
+          </div>
+        </section>
+
+        <section class="app-screen ingredient-nutrition-screen" id="ingredientNutritionScreen" aria-labelledby="ingredientNutritionTitle" hidden>
+          <div class="ingredient-nutrition-shell">
+            <header class="ingredient-nutrition-header">
+              <div>
+                <p class="eyebrow">Nutrition RAG</p>
+                <h2 id="ingredientNutritionTitle">食材营养</h2>
+              </div>
+              <div class="ingredient-nutrition-stats" aria-label="食材营养库统计">
+                <span><strong id="ingredientNutritionCount">0</strong> 项食材</span>
+                <span><strong id="ingredientNutritionShown">0</strong> 当前显示</span>
+                <span>每 1g 营养</span>
+              </div>
+            </header>
+
+            <section class="ingredient-nutrition-controls" aria-label="食材营养筛选">
+              <label class="ingredient-nutrition-search">
+                <span>检索</span>
+                <input id="ingredientNutritionSearchInput" type="search" placeholder="食材、英文名、FDC ID" autocomplete="off">
+              </label>
+              <label>
+                <span>排序</span>
+                <select id="ingredientNutritionSortSelect">
+                  <option value="">默认顺序</option>
+                  <option value="proteinG">蛋白优先</option>
+                  <option value="fiberG">纤维优先</option>
+                  <option value="energyKcal">能量优先</option>
+                  <option value="sodiumMg">钠优先</option>
+                </select>
+              </label>
+            </section>
+
+            <section class="ingredient-nutrition-toolbar" aria-live="polite">
+              <span id="ingredientNutritionStatus">正在加载食材营养 RAG...</span>
+              <button class="secondary-button slim-button" id="ingredientNutritionClear" type="button">清除</button>
+            </section>
+
+            <section class="nutrition-food-grid" id="ingredientNutritionGrid" aria-label="食材营养列表"></section>
           </div>
         </section>
       </main>
