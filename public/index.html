@@ -1,0 +1,159 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>轻食备餐教练</title>
+    <link rel="icon" href="./assets/meal-prep-board.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="side-rail">
+        <div class="brand-block">
+          <span class="brand-mark">LC</span>
+          <div>
+            <p class="eyebrow">Local DeepSeek Planner</p>
+            <h1>轻食备餐教练</h1>
+          </div>
+        </div>
+        <nav class="side-menu" aria-label="页面菜单">
+          <button class="side-menu-link active" type="button" data-screen="homeScreen" aria-controls="homeScreen" aria-current="page">
+            <span>01</span>
+            <strong>产品首页</strong>
+          </button>
+          <button class="side-menu-link" type="button" data-screen="plannerScreen" aria-controls="plannerScreen">
+            <span>02</span>
+            <strong>规划</strong>
+          </button>
+        </nav>
+        <img class="board-art" src="./assets/meal-prep-board.svg" alt="一周备餐看板">
+        <div class="metrics-strip" aria-label="默认规划指标">
+          <div>
+            <strong id="metricDays">7</strong>
+            <span>天计划</span>
+          </div>
+          <div>
+            <strong id="metricCalories">1500</strong>
+            <span>kcal</span>
+          </div>
+          <div>
+            <strong id="metricFamily">2</strong>
+            <span>人份</span>
+          </div>
+          <div>
+            <strong id="metricBmi">24.2</strong>
+            <span>BMI</span>
+          </div>
+        </div>
+        <div class="privacy-note">
+          <span>Key: browser only</span>
+          <span>Server: no storage</span>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="app-screen home-screen active" id="homeScreen" aria-label="产品首页"></section>
+
+        <section class="app-screen planner-screen" id="plannerScreen" aria-labelledby="plannerTitle" hidden>
+          <div class="planner-panel" id="plannerPanel">
+            <div class="section-heading">
+              <p class="eyebrow">Plan Workspace</p>
+              <h2 id="plannerTitle">规划</h2>
+            </div>
+
+            <form id="plannerForm" class="planner-form">
+              <fieldset class="api-box">
+                <legend>DeepSeek</legend>
+                <label for="apiKey">API Key</label>
+                <input id="apiKey" name="apiKey" type="password" autocomplete="off" placeholder="sk-..." spellcheck="false" required>
+                <div class="inline-row compact">
+                  <label class="check-row">
+                    <input id="rememberKey" type="checkbox" checked>
+                    <span>本机保存</span>
+                  </label>
+                  <select id="model" name="model" aria-label="DeepSeek 模型">
+                    <option value="deepseek-v4-flash">deepseek-v4-flash</option>
+                    <option value="deepseek-v4-pro">deepseek-v4-pro</option>
+                  </select>
+                </div>
+              </fieldset>
+
+              <div class="section-heading compact-heading">
+                <p class="eyebrow">Input</p>
+                <h3>目标与厨房约束</h3>
+              </div>
+
+              <div class="form-grid">
+                <label>
+                  <span>计划天数</span>
+                  <input id="days" name="days" type="number" min="1" max="14" value="7">
+                </label>
+                <label>
+                  <span>家庭人数</span>
+                  <input id="familySize" name="familySize" type="number" min="1" max="8" value="2">
+                </label>
+                <label>
+                  <span>每日热量</span>
+                  <input id="targetCalories" name="targetCalories" type="number" min="1000" max="3200" step="50" value="1500">
+                </label>
+                <label>
+                  <span>身高 cm</span>
+                  <input id="heightCm" name="heightCm" type="number" min="120" max="230" step="0.5" value="170">
+                </label>
+                <label>
+                  <span>体重 kg</span>
+                  <input id="weightKg" name="weightKg" type="number" min="35" max="220" step="0.1" value="70">
+                </label>
+                <label>
+                  <span>预算</span>
+                  <input id="budget" name="budget" value="每周 400-600 元">
+                </label>
+              </div>
+
+              <label>
+                <span>减脂目标</span>
+                <textarea id="goal" name="goal" rows="2">健康减脂，高蛋白，高纤维，午餐适合带饭，晚餐不太撑</textarea>
+              </label>
+              <label>
+                <span>口味偏好</span>
+                <input id="cuisine" name="cuisine" value="中式家常，少油少糖，偶尔日式">
+              </label>
+              <div class="form-grid two">
+                <label>
+                  <span>过敏/禁忌</span>
+                  <input id="allergies" name="allergies" placeholder="例如：花生、虾蟹">
+                </label>
+                <label>
+                  <span>不喜欢</span>
+                  <input id="dislikes" name="dislikes" value="肥肉，动物内脏，香菜">
+                </label>
+              </div>
+              <div class="form-grid two">
+                <label>
+                  <span>备餐时间</span>
+                  <input id="prepTime" name="prepTime" value="周日 2 小时，工作日 30 分钟">
+                </label>
+                <label>
+                  <span>厨房设备</span>
+                  <input id="equipment" name="equipment" value="电饭煲，炒锅，空气炸锅">
+                </label>
+              </div>
+              <label>
+                <span>现有食材</span>
+                <textarea id="pantry" name="pantry" rows="2" placeholder="例如：鸡胸肉、鸡蛋、糙米、西兰花"></textarea>
+              </label>
+
+              <div class="button-row">
+                <button class="primary-button" type="submit">生成备餐计划</button>
+              </div>
+            </form>
+
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="./app.js"></script>
+  </body>
+</html>
