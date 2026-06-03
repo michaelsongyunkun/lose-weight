@@ -36,6 +36,8 @@ const QUERY_ALIASES = [
 const AMOUNT_PATTERN = /\d+(?:\.\d+)?\s*(?:kg|g|mg|克|千克|公斤|斤|ml|l|升|毫升|个|颗|根|盒|瓶|袋|份|片|勺|匙|茶匙|汤匙|杯|碗)/gi;
 const SHAPE_SUFFIX_PATTERN = /(?:丁|丝|片|块|粒|末|段|条|泥|碎|小朵|小块|小丁|切片|切丝|切块)$/;
 const GENERIC_INGREDIENTS = new Set(["优质蛋白", "全谷物", "薯类", "深色蔬菜", "蔬菜", "主食", "蛋白质"]);
+const AUTO_SUPPLEMENT_CATEGORY = "自动补充采购";
+const AUTO_SUPPLEMENT_AMOUNT = "按菜谱用量";
 
 export function applyIngredientGovernance(plan, { nutritionIndex, pantry = "" } = {}) {
   if (!nutritionIndex || !Array.isArray(nutritionIndex.items)) {
@@ -57,18 +59,23 @@ export function applyIngredientGovernance(plan, { nutritionIndex, pantry = "" } 
     }
   }
 
-  const missing = collectMissingMealIngredients(plan.days, sourceNames);
-  if (missing.length) {
-    throw governanceError(`周计划食材未出现在采购清单或现有食材中：${missing.join("、")}。请把它们加入 shoppingList，或从菜谱 ingredients 中移除。`);
-  }
+  const autoAddedShoppingNames = addMissingMealIngredientsToShoppingList(
+    shoppingList,
+    collectMissingMealIngredients(plan.days, sourceNames),
+    nutritionIndex,
+    sourceNames
+  );
 
   const unmatchedShoppingNames = shoppingList
     .flatMap((group) => group.items)
     .filter((item) => item.nutritionStatus === "unmatched")
     .map((item) => item.name);
+  const sourceGuardrail = autoAddedShoppingNames.length
+    ? `周计划缺失食材已自动补入采购清单：${autoAddedShoppingNames.join("、")}。`
+    : "周计划食材已校验为来自采购清单或现有食材。";
   const ragGuardrail = unmatchedShoppingNames.length
-    ? `采购食材已尝试匹配本地 RAG；未命中项已保留：${unmatchedShoppingNames.join("、")}。周计划食材已校验为来自采购清单或现有食材。`
-    : "采购食材已匹配本地 RAG；周计划食材已校验为来自采购清单或现有食材。";
+    ? `采购食材已尝试匹配本地 RAG；未命中项已保留：${unmatchedShoppingNames.join("、")}。${sourceGuardrail}`
+    : `采购食材已匹配本地 RAG；${sourceGuardrail}`;
 
   const guardrails = [
     ...plan.guardrails,
@@ -112,6 +119,39 @@ function anchorShoppingItemToRag(item, nutritionIndex, sourceNames) {
   nextItem.display = shoppingItemDisplay(nextItem);
   addSourceName(sourceNames, originalName);
   return nextItem;
+}
+
+function addMissingMealIngredientsToShoppingList(shoppingList, missingIngredients, nutritionIndex, sourceNames) {
+  const addedNames = [];
+  let autoGroup = shoppingList.find((group) => group.category === AUTO_SUPPLEMENT_CATEGORY);
+
+  for (const missing of missingIngredients) {
+    const name = missing.name;
+    if (!name || sourceNamesHas(sourceNames, name)) {
+      continue;
+    }
+    if (!autoGroup) {
+      autoGroup = { category: AUTO_SUPPLEMENT_CATEGORY, items: [] };
+      shoppingList.push(autoGroup);
+    }
+    const item = anchorShoppingItemToRag(
+      {
+        name,
+        amount: missing.amount || AUTO_SUPPLEMENT_AMOUNT,
+        estimatedCost: null,
+        autoAdded: true,
+        source: "weeklyPlan"
+      },
+      nutritionIndex,
+      sourceNames
+    );
+    autoGroup.items.push(item);
+    addedNames.push(item.name);
+    addSourceName(sourceNames, item.rag?.name);
+    addSourceName(sourceNames, item.rag?.englishName);
+  }
+
+  return addedNames;
 }
 
 export function findRagIngredient(name, nutritionIndex) {
@@ -212,22 +252,34 @@ function scoreEntry(entry, query) {
 }
 
 function collectMissingMealIngredients(days, sourceNames) {
-  const missing = new Set();
+  const missing = new Map();
   for (const day of days) {
     for (const meal of day.meals) {
       for (const raw of meal.ingredients) {
-        const name = normalizeIngredientName(raw);
-        if (!name || GENERIC_INGREDIENTS.has(name)) {
-          missing.add(raw);
+        const normalized = normalizeIngredientName(raw);
+        const name = !normalized || GENERIC_INGREDIENTS.has(normalized)
+          ? String(raw || "").trim()
+          : normalized;
+        if (!name) {
           continue;
         }
-        if (!sourceNamesHas(sourceNames, name)) {
-          missing.add(name);
+        if (!sourceNamesHas(sourceNames, name) && !missing.has(name)) {
+          missing.set(name, {
+            name,
+            raw: String(raw || ""),
+            amount: extractIngredientAmount(raw)
+          });
         }
       }
     }
   }
-  return [...missing];
+  return [...missing.values()];
+}
+
+function extractIngredientAmount(value) {
+  const text = String(value || "");
+  const match = text.match(/\d+(?:\.\d+)?\s*(?:kg|g|mg|克|千克|公斤|斤|ml|l|升|毫升|个|颗|根|盒|瓶|袋|份|片|勺|匙|茶匙|汤匙|杯|碗)/i);
+  return match ? match[0].replace(/\s+/g, "") : AUTO_SUPPLEMENT_AMOUNT;
 }
 
 function parsePantryNames(pantry) {

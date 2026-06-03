@@ -281,3 +281,64 @@ test("POST /api/plan keeps shopping ingredients that do not match RAG", async ()
     server.close();
   }
 });
+
+test("POST /api/plan auto-adds weekly ingredients missing from shopping list", async () => {
+  const server = createCookingCoachServer({
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  weeklyPlan: {
+                    day1: {
+                      breakfast: {
+                        name: "葱花鸡蛋",
+                        ingredients: ["鸡蛋2个", "盐1g", "葱5g"],
+                        steps: ["打散鸡蛋", "切葱花", "加盐调味", "小火煎至定型", "出锅分装"],
+                        calories: 220,
+                        protein: 14
+                      }
+                    }
+                  },
+                  shoppingList: [],
+                  mealPrepGuide: {
+                    sundayPrep: { duration: "10分钟", tasks: ["0-10分钟：检查调味料"] },
+                    weekdayReheat: { breakfast: "现做即可" }
+                  }
+                })
+              }
+            }
+          ]
+        };
+      }
+    })
+  });
+  const baseUrl = await listen(server);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        apiKey: "sk-test",
+        model: "deepseek-v4-flash",
+        profile: { days: 1, familySize: 1, targetCalories: 1500, pantry: "鸡蛋2个" }
+      })
+    });
+    const body = await response.json();
+    const autoGroup = body.plan.shoppingList.find((group) => group.category === "自动补充采购");
+
+    assert.equal(response.status, 200);
+    assert.ok(autoGroup);
+    assert.deepEqual(autoGroup.items.map((item) => item.name), ["盐", "葱"]);
+    assert.equal(autoGroup.items[0].nutritionStatus, "unmatched");
+    assert.equal(autoGroup.items[1].nutritionStatus, "matched");
+    assert.match(body.plan.guardrails.at(-1), /周计划缺失食材已自动补入采购清单：盐、葱/);
+  } finally {
+    server.close();
+  }
+});

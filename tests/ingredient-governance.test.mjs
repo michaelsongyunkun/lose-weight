@@ -85,17 +85,24 @@ test("applyIngredientGovernance keeps shopping ingredients outside the RAG index
   assert.match(governed.guardrails.at(-1), /未命中项已保留：未知蛋白/);
 });
 
-test("applyIngredientGovernance rejects meal ingredients missing from shopping list or pantry", () => {
-  assert.throws(
-    () => applyIngredientGovernance(
-      planWith({
-        ingredients: ["鸡胸肉100g", "鸡蛋1个"],
-        shoppingItems: [{ name: "鸡胸肉", amount: "800g", estimatedCost: 32 }]
-      }),
-      { nutritionIndex, pantry: "糙米500g" }
-    ),
-    /周计划食材未出现在采购清单或现有食材中.*鸡蛋/
+test("applyIngredientGovernance auto-adds meal ingredients missing from shopping list or pantry", () => {
+  const governed = applyIngredientGovernance(
+    planWith({
+      ingredients: ["鸡胸肉100g", "鸡蛋1个"],
+      shoppingItems: [{ name: "鸡胸肉", amount: "800g", estimatedCost: 32 }]
+    }),
+    { nutritionIndex, pantry: "糙米500g" }
   );
+
+  const autoGroup = governed.shoppingList.find((group) => group.category === "自动补充采购");
+  assert.ok(autoGroup);
+  assert.equal(autoGroup.items.length, 1);
+  assert.equal(autoGroup.items[0].name, "鸡蛋");
+  assert.equal(autoGroup.items[0].amount, "1个");
+  assert.equal(autoGroup.items[0].autoAdded, true);
+  assert.equal(autoGroup.items[0].nutritionStatus, "matched");
+  assert.equal(autoGroup.items[0].rag.fdcId, "1003");
+  assert.match(governed.guardrails.at(-1), /周计划缺失食材已自动补入采购清单：鸡蛋/);
 });
 
 test("findRagIngredient prefers basic raw ingredients over prepared composite dishes", () => {
