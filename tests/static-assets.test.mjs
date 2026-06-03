@@ -181,6 +181,20 @@ test("sidebar menu exposes ingredient nutrition as the fourth RAG screen", async
   assert.match(css, /\.nutrition-food-grid/);
 });
 
+test("menu and ingredient nutrition screens render random samples instead of sequential items", async () => {
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const menuRenderer = app.match(/function renderMenuLibrary[\s\S]*?(?=\n\nfunction filterMenuRecipes)/);
+  const nutritionRenderer = app.match(/function renderIngredientNutrition[\s\S]*?(?=\n\nfunction filterIngredientNutrition)/);
+
+  assert.ok(menuRenderer, "menu renderer exists");
+  assert.ok(nutritionRenderer, "ingredient nutrition renderer exists");
+  assert.match(app, /function pickRandomItems/);
+  assert.match(menuRenderer[0], /pickRandomItems\(items,\s*MENU_RENDER_LIMIT\)/);
+  assert.match(nutritionRenderer[0], /pickRandomItems\(items,\s*NUTRITION_RENDER_LIMIT\)/);
+  assert.doesNotMatch(menuRenderer[0], /items\.slice\(0,\s*MENU_RENDER_LIMIT\)/);
+  assert.doesNotMatch(nutritionRenderer[0], /items\.slice\(0,\s*NUTRITION_RENDER_LIMIT\)/);
+});
+
 test("menu library does not expose source file or FDC match rows", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");

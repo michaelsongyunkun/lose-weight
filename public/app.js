@@ -252,11 +252,11 @@ function hydrateSelect(select, values, emptyLabel) {
 function renderMenuLibrary() {
   if (!menuLibraryIndex || !menuRecipeGrid) return;
   const items = filterMenuRecipes(menuLibraryIndex.items || []);
-  const visibleItems = items.slice(0, MENU_RENDER_LIMIT);
+  const visibleItems = pickRandomItems(items, MENU_RENDER_LIMIT);
   if (menuLibraryShown) {
     menuLibraryShown.textContent = String(items.length);
   }
-  setMenuLibraryStatus(`${items.length} 道匹配菜品${items.length > MENU_RENDER_LIMIT ? `，显示前 ${MENU_RENDER_LIMIT} 道` : ""}`);
+  setMenuLibraryStatus(`${items.length} 道匹配菜品${items.length > MENU_RENDER_LIMIT ? `，随机显示 ${MENU_RENDER_LIMIT} 道` : ""}`);
   updateIngredientChips();
   menuRecipeGrid.innerHTML = visibleItems.length
     ? visibleItems.map(renderRecipeCard).join("")
@@ -369,11 +369,11 @@ function renderIngredientNutrition() {
     ingredientNutritionCount.textContent = String(nutritionIndex.itemCount || nutritionIndex.items?.length || 0);
   }
   const items = filterIngredientNutrition(nutritionIndex.items || []);
-  const visibleItems = items.slice(0, NUTRITION_RENDER_LIMIT);
+  const visibleItems = pickRandomItems(items, NUTRITION_RENDER_LIMIT);
   if (ingredientNutritionShown) {
     ingredientNutritionShown.textContent = String(items.length);
   }
-  setIngredientNutritionStatus(`${items.length} 项匹配食材${items.length > NUTRITION_RENDER_LIMIT ? `，显示前 ${NUTRITION_RENDER_LIMIT} 项` : ""}`);
+  setIngredientNutritionStatus(`${items.length} 项匹配食材${items.length > NUTRITION_RENDER_LIMIT ? `，随机显示 ${NUTRITION_RENDER_LIMIT} 项` : ""}`);
   ingredientNutritionGrid.innerHTML = visibleItems.length
     ? visibleItems.map(renderIngredientNutritionCard).join("")
     : `<div class="ingredient-nutrition-empty"><strong>没有匹配食材</strong><span>换一个中文名、英文名或 FDC ID。</span></div>`;
@@ -393,6 +393,19 @@ function filterIngredientNutrition(items) {
     return filtered;
   }
   return filtered.slice().sort((a, b) => nutrientSortValue(b, sortKey) - nutrientSortValue(a, sortKey));
+}
+
+function pickRandomItems(items, limit) {
+  if (!Array.isArray(items)) return [];
+  const normalizedLimit = Math.max(0, Number(limit) || 0);
+  if (items.length <= normalizedLimit) return items.slice();
+
+  const pool = items.slice();
+  for (let index = pool.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
+  }
+  return pool.slice(0, normalizedLimit);
 }
 
 function nutrientSortValue(item, key) {
