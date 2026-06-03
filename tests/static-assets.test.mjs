@@ -142,12 +142,21 @@ test("menu library screen loads the recipe RAG index", async () => {
   assert.equal(rag.itemCount, 3008);
   assert.equal(rag.items[0].name, "火鸡肉西兰花小炒");
   assert.ok(rag.facets.topIngredients.includes("盐"));
+  assert.equal(rag.calorieEstimateSource, "源食材可做菜品3000+道_热量估算.txt");
+  assert.equal(rag.calorieEstimateMatchedCount, 3008);
+  assert.equal(rag.items[0].calorieEstimate.totalKcal, 420);
+  assert.equal(rag.items[0].calorieEstimate.perServingKcal, 210);
+  assert.match(rag.items[0].calorieEstimate.text, /火鸡肉180g≈243大卡/);
+  const tofuRecipe = rag.items.find((item) => item.name === "豆腐西兰花小炒");
+  assert.equal(tofuRecipe.calorieEstimate.totalKcal, 310);
+  assert.equal(tofuRecipe.calorieEstimate.perServingKcal, 155);
   assert.match(html, /id="menuLibraryScreen"/);
   assert.match(html, /id="menuRecipeGrid"/);
   assert.match(html, /id="menuSearchInput"/);
   assert.match(app, /MENU_LIBRARY_URL/);
   assert.match(app, /function renderMenuLibrary/);
   assert.match(app, /data-menu-ingredient/);
+  assert.match(app, /renderRecipeCalories/);
   assert.match(css, /\.recipe-grid/);
   assert.match(css, /\.recipe-card/);
 });
@@ -198,7 +207,7 @@ test("shopping nutrition renderer only shows purchase-level totals", async () =>
   assert.doesNotMatch(renderer[0], /RAG/);
 });
 
-test("planning screen includes the DeepSeek agent panel below the form", async () => {
+test("planning screen keeps the DeepSeek agent panel but hides the system prompt", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
@@ -206,10 +215,13 @@ test("planning screen includes the DeepSeek agent panel below the form", async (
   const agentIndex = html.indexOf('id="cookingAgentPanel"');
 
   assert.ok(agentIndex > formIndex, "agent panel follows the planning form");
-  assert.match(html, /id="agentPromptPreview"/);
+  assert.doesNotMatch(html, /id="agentPromptPreview"/);
+  assert.doesNotMatch(html, /System Prompt/);
   assert.match(html, /DeepSeek/);
   assert.match(html, /API Key 由用户提供/);
   assert.match(app, /\/api\/agent/);
-  assert.match(app, /agent\.systemPrompt/);
+  assert.doesNotMatch(app, /agentPromptPreview/);
+  assert.doesNotMatch(app, /agent\.systemPrompt/);
+  assert.doesNotMatch(app, /system prompt/i);
   assert.match(css, /\.agent-panel/);
 });

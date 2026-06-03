@@ -1167,6 +1167,32 @@ button:disabled {
   color: var(--blue);
 }
 
+.recipe-calories {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.recipe-calories span {
+  min-height: 34px;
+  display: flex;
+  align-items: baseline;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid rgba(221, 154, 70, 0.28);
+  border-radius: 8px;
+  background: #fff6df;
+  color: #6b4b18;
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.recipe-calories strong {
+  color: var(--ink);
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+}
+
 .recipe-ingredients,
 .recipe-method p {
   margin-bottom: 0;

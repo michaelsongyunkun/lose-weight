@@ -55,7 +55,58 @@ def compact_method(value):
     return re.sub(r"\s+", " ", text(value))
 
 
-def build_index(source_path):
+def parse_calorie_estimates(source_path):
+    estimates = {}
+    pattern = re.compile(
+        r"^\s*(?P<source_id>\d+)\.\s*"
+        r"(?P<name>.+?)（[^）]+）：整道约(?P<total>\d+)大卡，"
+        r"每人约(?P<per_serving>\d+)大卡。(?P<detail>.+)$"
+    )
+
+    for line in Path(source_path).read_text(encoding="utf-8-sig").splitlines():
+        match = pattern.match(line.strip())
+        if not match:
+            continue
+        name = text(match.group("name"))
+        estimates[name] = {
+            "sourceId": int(match.group("source_id")),
+            "totalKcal": int(match.group("total")),
+            "perServingKcal": int(match.group("per_serving")),
+            "text": compact_method(match.group("detail")),
+        }
+
+    return estimates
+
+
+def attach_calorie_estimates(index, estimate_path):
+    estimates = parse_calorie_estimates(estimate_path)
+    matched_count = 0
+    unmatched_recipe_names = []
+
+    for item in index["items"]:
+        estimate = estimates.get(item["name"])
+        if not estimate:
+            unmatched_recipe_names.append(item["name"])
+            continue
+        item["calorieEstimate"] = estimate
+        item["searchText"] = " ".join([
+            item["searchText"],
+            str(estimate["totalKcal"]),
+            str(estimate["perServingKcal"]),
+            "kcal",
+            "大卡",
+        ]).lower()
+        matched_count += 1
+
+    index["calorieEstimateSource"] = Path(estimate_path).name
+    index["calorieEstimateCount"] = len(estimates)
+    index["calorieEstimateMatchedCount"] = matched_count
+    index["calorieEstimateMissingRecipeCount"] = len(unmatched_recipe_names)
+    if unmatched_recipe_names:
+        index["calorieEstimateMissingRecipes"] = unmatched_recipe_names[:20]
+
+
+def build_index(source_path, calorie_estimate_path=None):
     workbook = openpyxl.load_workbook(source_path, read_only=True, data_only=True)
     try:
         worksheet = workbook[workbook.sheetnames[0]]
@@ -100,7 +151,7 @@ def build_index(source_path):
             for ingredient in ingredients:
                 ingredient_counter[ingredient["name"]] += 1
 
-        return {
+        index = {
             "source": Path(source_path).name,
             "sheet": worksheet.title,
             "itemCount": len(items),
@@ -111,13 +162,16 @@ def build_index(source_path):
             },
             "items": items,
         }
+        if calorie_estimate_path:
+            attach_calorie_estimates(index, calorie_estimate_path)
+        return index
     finally:
         workbook.close()
 
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: build_menu_library_rag.py <source.xlsx> <output.json>", file=sys.stderr)
+    if len(sys.argv) not in (3, 4):
+        print("Usage: build_menu_library_rag.py <source.xlsx> <output.json> [calorie-estimates.txt]", file=sys.stderr)
         return 2
 
     source_arg = Path(sys.argv[1])
@@ -128,15 +182,28 @@ def main():
 
     output_path = Path(sys.argv[2])
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    calorie_arg = Path(sys.argv[3]) if len(sys.argv) == 4 else None
+    if calorie_arg and not calorie_arg.exists():
+        print(f"Calorie estimate file not found: {calorie_arg}", file=sys.stderr)
+        return 1
 
     # openpyxl can struggle with non-ASCII paths on some Windows shells, so parse a local ASCII temp copy.
     temp_path = output_path.parent / "_menu_library_source.xlsx"
     shutil.copyfile(source_path, temp_path)
     try:
-        index = build_index(temp_path)
+        index = build_index(temp_path, calorie_arg)
         index["source"] = source_arg.name
     finally:
         temp_path.unlink(missing_ok=True)
+
+    if calorie_arg and index.get("calorieEstimateMatchedCount") != index["itemCount"]:
+        missing = index.get("calorieEstimateMissingRecipes", [])
+        print(
+            f"Calorie estimates matched {index.get('calorieEstimateMatchedCount')} "
+            f"of {index['itemCount']} recipes by name. Missing examples: {missing}",
+            file=sys.stderr,
+        )
+        return 1
 
     output_path.write_text(json.dumps(index, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
     print(f"Wrote {index['itemCount']} recipes to {output_path}")

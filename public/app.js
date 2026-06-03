@@ -58,7 +58,6 @@ const prepView = document.querySelector("#prepView");
 const appScreens = document.querySelectorAll(".app-screen");
 const screenControls = document.querySelectorAll("[data-screen]");
 const menuButtons = document.querySelectorAll(".side-menu-link");
-const agentPromptPreview = document.querySelector("#agentPromptPreview");
 const agentTitle = document.querySelector("#agentTitle");
 const agentProvider = document.querySelector("#agentProvider");
 const agentKeyPolicy = document.querySelector("#agentKeyPolicy");
@@ -96,11 +95,7 @@ bindScreenNavigation();
 bindMenuLibraryControls();
 bindIngredientNutritionControls();
 loadNutritionIndex().catch(() => {});
-loadAgentPanel().catch(() => {
-  if (agentPromptPreview) {
-    agentPromptPreview.textContent = "Agent system prompt 暂时无法加载。";
-  }
-});
+loadAgentPanel().catch(() => {});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -310,12 +305,25 @@ function renderRecipeCard(recipe) {
         <span>${escapeHtml(recipe.technique || "技法")}</span>
         <span>${escapeHtml(recipe.flavor || "风味")}</span>
       </div>
+      ${renderRecipeCalories(recipe)}
       <p class="recipe-ingredients">${escapeHtml(ingredientLine)}</p>
       <details class="recipe-method">
         <summary>制作方式</summary>
         <p>${escapeHtml(recipe.method)}</p>
       </details>
     </article>
+  `;
+}
+
+function renderRecipeCalories(recipe) {
+  const estimate = recipe.calorieEstimate;
+  if (!estimate) return "";
+
+  return `
+    <div class="recipe-calories" aria-label="热量估算">
+      <span><strong>${escapeHtml(estimate.totalKcal)}</strong> 整道 kcal</span>
+      <span><strong>${escapeHtml(estimate.perServingKcal)}</strong> 每人 kcal</span>
+    </div>
   `;
 }
 
@@ -477,7 +485,6 @@ function isLocalHost(hostname) {
 }
 
 async function loadAgentPanel() {
-  if (!agentPromptPreview) return;
   const response = await fetch(appUrl("/api/agent"));
   if (!response.ok) {
     throw new Error(`HTTP ${response.status}`);
@@ -486,7 +493,6 @@ async function loadAgentPanel() {
   if (agentTitle && agent.name) {
     agentTitle.textContent = agent.name;
   }
-  agentPromptPreview.textContent = agent.systemPrompt || "";
   if (agentProvider) {
     agentProvider.textContent = agent.provider || "DeepSeek";
   }
