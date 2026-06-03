@@ -149,6 +149,19 @@ test("menu library screen loads the recipe RAG index", async () => {
   assert.match(css, /\.recipe-card/);
 });
 
+test("menu library does not expose source file or FDC match rows", async () => {
+  const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+
+  assert.doesNotMatch(html, /id="menuLibrarySource"/);
+  assert.doesNotMatch(app, /menuLibrarySource/);
+  assert.doesNotMatch(app, /index\.source/);
+  assert.doesNotMatch(app, /fdcLine/);
+  assert.doesNotMatch(app, /recipe-fdc/);
+  assert.doesNotMatch(css, /\.recipe-fdc/);
+});
+
 test("shopping nutrition renderer only shows purchase-level totals", async () => {
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const renderer = app.match(/function renderNutritionResult[\s\S]*?(?=\n\nfunction renderNutrientValue)/);

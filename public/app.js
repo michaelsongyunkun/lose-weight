@@ -70,7 +70,6 @@ const menuRecipeGrid = document.querySelector("#menuRecipeGrid");
 const menuLibraryCount = document.querySelector("#menuLibraryCount");
 const menuLibraryShown = document.querySelector("#menuLibraryShown");
 const menuLibraryStatus = document.querySelector("#menuLibraryStatus");
-const menuLibrarySource = document.querySelector("#menuLibrarySource");
 const menuClearFilters = document.querySelector("#menuClearFilters");
 
 let currentPlan = null;
@@ -224,9 +223,6 @@ function hydrateMenuLibraryFilters(index) {
   if (menuLibraryCount) {
     menuLibraryCount.textContent = String(index.itemCount || index.items?.length || 0);
   }
-  if (menuLibrarySource) {
-    menuLibrarySource.textContent = index.source || "菜单 RAG";
-  }
   hydrateSelect(menuTechniqueSelect, index.facets?.techniques || [], "全部技法");
   hydrateSelect(menuFlavorSelect, index.facets?.flavors || [], "全部风味");
   if (menuIngredientChips) {
@@ -289,10 +285,6 @@ function renderRecipeCard(recipe) {
     .slice(0, 7)
     .map((item) => item.amount ? `${item.name}${item.amount}` : item.name)
     .join(" / ");
-  const fdcLine = (recipe.fdcMatches || [])
-    .slice(0, 5)
-    .map((item) => `${item.name}:${item.fdcId}`)
-    .join(" / ");
   return `
     <article class="recipe-card">
       <div class="recipe-card-top">
@@ -311,7 +303,6 @@ function renderRecipeCard(recipe) {
         <summary>制作方式</summary>
         <p>${escapeHtml(recipe.method)}</p>
       </details>
-      ${fdcLine ? `<p class="recipe-fdc">${escapeHtml(fdcLine)}</p>` : ""}
     </article>
   `;
 }

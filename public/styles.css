@@ -1167,7 +1167,6 @@ button:disabled {
 }
 
 .recipe-ingredients,
-.recipe-fdc,
 .recipe-method p {
   margin-bottom: 0;
   color: var(--muted);
@@ -1200,14 +1199,6 @@ button:disabled {
 
 .recipe-method p {
   padding: 0 11px 11px;
-}
-
-.recipe-fdc {
-  padding: 9px;
-  border-radius: 7px;
-  background: #fff7dc;
-  color: #6f6243;
-  overflow-wrap: anywhere;
 }
 
 .menu-empty-state {
