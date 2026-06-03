@@ -62,9 +62,17 @@ export function applyIngredientGovernance(plan, { nutritionIndex, pantry = "" } 
     throw governanceError(`周计划食材未出现在采购清单或现有食材中：${missing.join("、")}。请把它们加入 shoppingList，或从菜谱 ingredients 中移除。`);
   }
 
+  const unmatchedShoppingNames = shoppingList
+    .flatMap((group) => group.items)
+    .filter((item) => item.nutritionStatus === "unmatched")
+    .map((item) => item.name);
+  const ragGuardrail = unmatchedShoppingNames.length
+    ? `采购食材已尝试匹配本地 RAG；未命中项已保留：${unmatchedShoppingNames.join("、")}。周计划食材已校验为来自采购清单或现有食材。`
+    : "采购食材已匹配本地 RAG；周计划食材已校验为来自采购清单或现有食材。";
+
   const guardrails = [
     ...plan.guardrails,
-    "采购食材已锚定本地 RAG；周计划食材已校验为来自采购清单或现有食材。"
+    ragGuardrail
   ];
 
   return {
@@ -76,15 +84,25 @@ export function applyIngredientGovernance(plan, { nutritionIndex, pantry = "" } 
 
 function anchorShoppingItemToRag(item, nutritionIndex, sourceNames) {
   const match = findRagIngredient(item.name, nutritionIndex);
+  const originalName = item.name;
   if (!match) {
-    throw governanceError(`采购食材未命中 RAG：${item.name}。请改成营养库中存在的单一标准食材名。`);
+    const nextItem = {
+      ...item,
+      originalName,
+      name: originalName,
+      rag: null,
+      nutritionStatus: "unmatched"
+    };
+    nextItem.display = shoppingItemDisplay(nextItem);
+    addSourceName(sourceNames, originalName);
+    return nextItem;
   }
 
-  const originalName = item.name;
   const nextItem = {
     ...item,
     originalName,
     name: originalName,
+    nutritionStatus: "matched",
     rag: {
       fdcId: String(match.entry.fdcId || ""),
       name: String(match.entry.name || originalName),

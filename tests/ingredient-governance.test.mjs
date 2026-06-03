@@ -64,20 +64,25 @@ test("applyIngredientGovernance marks every shopping ingredient with a RAG match
     name: "鸡胸肉",
     englishName: "Chicken breast, roasted"
   });
-  assert.match(governed.guardrails.at(-1), /采购食材已锚定本地 RAG/);
+  assert.equal(item.nutritionStatus, "matched");
+  assert.match(governed.guardrails.at(-1), /采购食材已匹配本地 RAG/);
 });
 
-test("applyIngredientGovernance rejects shopping ingredients outside the RAG index", () => {
-  assert.throws(
-    () => applyIngredientGovernance(
-      planWith({
-        ingredients: ["未知蛋白100g"],
-        shoppingItems: [{ name: "未知蛋白", amount: "500g", estimatedCost: 20 }]
-      }),
-      { nutritionIndex, pantry: "" }
-    ),
-    /采购食材未命中 RAG.*未知蛋白/
+test("applyIngredientGovernance keeps shopping ingredients outside the RAG index", () => {
+  const governed = applyIngredientGovernance(
+    planWith({
+      ingredients: ["未知蛋白100g"],
+      shoppingItems: [{ name: "未知蛋白", amount: "500g", estimatedCost: 20 }]
+    }),
+    { nutritionIndex, pantry: "" }
   );
+
+  const item = governed.shoppingList[0].items[0];
+  assert.equal(item.name, "未知蛋白");
+  assert.equal(item.originalName, "未知蛋白");
+  assert.equal(item.rag, null);
+  assert.equal(item.nutritionStatus, "unmatched");
+  assert.match(governed.guardrails.at(-1), /未命中项已保留：未知蛋白/);
 });
 
 test("applyIngredientGovernance rejects meal ingredients missing from shopping list or pantry", () => {

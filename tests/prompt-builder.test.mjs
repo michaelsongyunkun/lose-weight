@@ -91,7 +91,8 @@ test("buildCookingPrompt asks DeepSeek for strict Chinese JSON meal prep output"
   assert.match(prompt, /每个食材都必须给出预计费用/);
   assert.match(prompt, /身高、体重、BMI 和蛋白目标/);
   assert.match(prompt, /采购清单中的每个 name 必须是一个单一、标准食材名/);
-  assert.match(prompt, /必须能被本地食材营养 RAG 检索命中/);
+  assert.match(prompt, /优先使用能被本地食材营养 RAG 检索命中的名称/);
+  assert.match(prompt, /未命中 RAG，也必须继续生成并保留该采购项/);
   assert.match(prompt, /每道菜 ingredients 只能使用采购清单 name 或现有食材中的食材/);
   assert.match(prompt, /禁止使用“优质蛋白 1 份”/);
 });

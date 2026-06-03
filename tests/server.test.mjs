@@ -221,3 +221,62 @@ test("POST /api/plan proxies to DeepSeek when API key is supplied", async () => 
     server.close();
   }
 });
+
+test("POST /api/plan keeps shopping ingredients that do not match RAG", async () => {
+  const server = createCookingCoachServer({
+    fetchImpl: async () => ({
+      ok: true,
+      status: 200,
+      async json() {
+        return {
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  weeklyPlan: {
+                    day1: {
+                      breakfast: {
+                        name: "生抽鸡蛋",
+                        ingredients: ["鸡蛋2个", "生抽5ml"],
+                        steps: ["打散鸡蛋", "加入生抽", "搅拌均匀", "小火加热", "凝固后出锅"],
+                        calories: 220,
+                        protein: 14
+                      }
+                    }
+                  },
+                  shoppingList: [{ name: "生抽", amount: "250ml", estimatedCost: 8 }],
+                  mealPrepGuide: {
+                    sundayPrep: { duration: "10分钟", tasks: ["0-10分钟：检查调味料"] },
+                    weekdayReheat: { breakfast: "现做即可" }
+                  }
+                })
+              }
+            }
+          ]
+        };
+      }
+    })
+  });
+  const baseUrl = await listen(server);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/plan`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        apiKey: "sk-test",
+        model: "deepseek-v4-flash",
+        profile: { days: 1, familySize: 1, targetCalories: 1500, pantry: "鸡蛋2个" }
+      })
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.plan.shoppingList[0].items[0].name, "生抽");
+    assert.equal(body.plan.shoppingList[0].items[0].nutritionStatus, "unmatched");
+    assert.equal(body.plan.shoppingList[0].items[0].rag, null);
+    assert.match(body.plan.guardrails.at(-1), /未命中项已保留：生抽/);
+  } finally {
+    server.close();
+  }
+});

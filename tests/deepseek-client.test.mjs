@@ -89,7 +89,8 @@ test("generatePlanWithDeepSeek sends bearer key and normalizes model JSON", asyn
   assert.equal(plan.days[0].totalProtein, 28);
   assert.equal(plan.shoppingList[0].items[0].display, "豆腐 400g 约 8 元");
   assert.equal(plan.shoppingList[0].items[0].rag.name, "豆腐");
-  assert.match(plan.guardrails.at(-1), /采购食材已锚定本地 RAG/);
+  assert.equal(plan.shoppingList[0].items[0].nutritionStatus, "matched");
+  assert.match(plan.guardrails.at(-1), /采购食材已匹配本地 RAG/);
   assert.equal(plan.batchPrep[0].task, "清洗豆腐");
 });
 
