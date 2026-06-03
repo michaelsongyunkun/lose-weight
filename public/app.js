@@ -4,7 +4,6 @@ const LOCAL_APP_ORIGINS = new Set([LOCAL_APP_ORIGIN, "http://localhost:4317"]);
 const NUTRITION_INDEX_URL = appUrl("/data/ingredient-nutrition-rag.json");
 const MENU_LIBRARY_URL = appUrl("/data/menu-library-rag.json");
 const MENU_RENDER_LIMIT = 48;
-const NUTRITION_RENDER_LIMIT = 60;
 const NUTRIENT_DISPLAY_FIELDS = [
   ["energyKcal", "能量"],
   ["proteinG", "蛋白"],
@@ -71,13 +70,6 @@ const menuLibraryCount = document.querySelector("#menuLibraryCount");
 const menuLibraryShown = document.querySelector("#menuLibraryShown");
 const menuLibraryStatus = document.querySelector("#menuLibraryStatus");
 const menuClearFilters = document.querySelector("#menuClearFilters");
-const ingredientNutritionSearchInput = document.querySelector("#ingredientNutritionSearchInput");
-const ingredientNutritionSortSelect = document.querySelector("#ingredientNutritionSortSelect");
-const ingredientNutritionGrid = document.querySelector("#ingredientNutritionGrid");
-const ingredientNutritionCount = document.querySelector("#ingredientNutritionCount");
-const ingredientNutritionShown = document.querySelector("#ingredientNutritionShown");
-const ingredientNutritionStatus = document.querySelector("#ingredientNutritionStatus");
-const ingredientNutritionClear = document.querySelector("#ingredientNutritionClear");
 
 let currentPlan = null;
 let currentMarkdown = "";
@@ -93,7 +85,6 @@ renderEmpty();
 bindMetricMirrors();
 bindScreenNavigation();
 bindMenuLibraryControls();
-bindIngredientNutritionControls();
 loadNutritionIndex().catch(() => {});
 loadAgentPanel().catch(() => {});
 
@@ -162,9 +153,6 @@ function switchScreen(screenId) {
 
   if (screenId === "menuLibraryScreen") {
     ensureMenuLibraryLoaded();
-  }
-  if (screenId === "ingredientNutritionScreen") {
-    ensureIngredientNutritionLoaded();
   }
 }
 
@@ -333,68 +321,6 @@ function setMenuLibraryStatus(text) {
   }
 }
 
-function bindIngredientNutritionControls() {
-  ingredientNutritionSearchInput?.addEventListener("input", renderIngredientNutrition);
-  ingredientNutritionSortSelect?.addEventListener("change", renderIngredientNutrition);
-  ingredientNutritionClear?.addEventListener("click", () => {
-    if (ingredientNutritionSearchInput) ingredientNutritionSearchInput.value = "";
-    if (ingredientNutritionSortSelect) ingredientNutritionSortSelect.value = "";
-    renderIngredientNutrition();
-  });
-}
-
-async function ensureIngredientNutritionLoaded() {
-  if (nutritionIndex) {
-    renderIngredientNutrition();
-    return;
-  }
-  if (!ingredientNutritionGrid) return;
-  ingredientNutritionGrid.innerHTML = `<div class="ingredient-nutrition-empty"><strong>正在加载</strong><span>食材营养 RAG 正在读取。</span></div>`;
-  setIngredientNutritionStatus("正在加载食材营养 RAG...");
-  try {
-    const index = await loadNutritionIndex();
-    if (ingredientNutritionCount) {
-      ingredientNutritionCount.textContent = String(index.itemCount || index.items?.length || 0);
-    }
-    renderIngredientNutrition();
-  } catch (error) {
-    setIngredientNutritionStatus(`食材营养 RAG 加载失败：${error.message}`);
-    ingredientNutritionGrid.innerHTML = `<div class="ingredient-nutrition-empty"><strong>加载失败</strong><span>${escapeHtml(error.message)}</span></div>`;
-  }
-}
-
-function renderIngredientNutrition() {
-  if (!nutritionIndex || !ingredientNutritionGrid) return;
-  if (ingredientNutritionCount) {
-    ingredientNutritionCount.textContent = String(nutritionIndex.itemCount || nutritionIndex.items?.length || 0);
-  }
-  const items = filterIngredientNutrition(nutritionIndex.items || []);
-  const visibleItems = pickRandomItems(items, NUTRITION_RENDER_LIMIT);
-  if (ingredientNutritionShown) {
-    ingredientNutritionShown.textContent = String(items.length);
-  }
-  setIngredientNutritionStatus(`${items.length} 项匹配食材${items.length > NUTRITION_RENDER_LIMIT ? `，随机显示 ${NUTRITION_RENDER_LIMIT} 项` : ""}`);
-  ingredientNutritionGrid.innerHTML = visibleItems.length
-    ? visibleItems.map(renderIngredientNutritionCard).join("")
-    : `<div class="ingredient-nutrition-empty"><strong>没有匹配食材</strong><span>换一个中文名、英文名或 FDC ID。</span></div>`;
-}
-
-function filterIngredientNutrition(items) {
-  const keyword = (ingredientNutritionSearchInput?.value || "").trim().toLowerCase();
-  const sortKey = ingredientNutritionSortSelect?.value || "";
-  const filtered = items.filter((item) => {
-    if (!keyword) return true;
-    return String(item.searchText || "").includes(keyword) ||
-      String(item.name || "").toLowerCase().includes(keyword) ||
-      String(item.englishName || "").toLowerCase().includes(keyword) ||
-      String(item.fdcId || "").toLowerCase().includes(keyword);
-  });
-  if (!sortKey) {
-    return filtered;
-  }
-  return filtered.slice().sort((a, b) => nutrientSortValue(b, sortKey) - nutrientSortValue(a, sortKey));
-}
-
 function pickRandomItems(items, limit) {
   if (!Array.isArray(items)) return [];
   const normalizedLimit = Math.max(0, Number(limit) || 0);
@@ -406,38 +332,6 @@ function pickRandomItems(items, limit) {
     [pool[index], pool[swapIndex]] = [pool[swapIndex], pool[index]];
   }
   return pool.slice(0, normalizedLimit);
-}
-
-function nutrientSortValue(item, key) {
-  const value = Number(item.nutrients?.[key]?.value);
-  return Number.isFinite(value) ? value : -Infinity;
-}
-
-function renderIngredientNutritionCard(item) {
-  const features = (item.features || []).slice(0, 3);
-  const summary = features.length ? `${features.join(" / ")} / 每 100g 营养值` : "每 100g 营养值";
-  return `
-    <article class="nutrition-food-card">
-      <div class="nutrition-food-top">
-        <span>${escapeHtml(String(item.id).padStart(5, "0"))}</span>
-        <div>
-          <strong>${escapeHtml(item.name || item.englishName || "未命名食材")}</strong>
-          <small>${escapeHtml(item.englishName || `FDC ${item.fdcId || ""}`)}</small>
-        </div>
-      </div>
-      <div class="nutrition-food-values">
-        ${NUTRIENT_DISPLAY_FIELDS.map(([key, label]) => renderNutrientValue(item, key, label)).join("")}
-      </div>
-      <p class="nutrition-food-summary">${escapeHtml(summary)}</p>
-      <span class="nutrition-food-fdc">FDC ${escapeHtml(item.fdcId || "NA")}</span>
-    </article>
-  `;
-}
-
-function setIngredientNutritionStatus(text) {
-  if (ingredientNutritionStatus) {
-    ingredientNutritionStatus.textContent = text;
-  }
 }
 
 async function requestPlan() {
@@ -1011,23 +905,6 @@ function renderNutritionResult(result, item, index) {
       ${renderTotalNutrition(entry, amountGrams)}
     </div>
   `;
-}
-
-function renderNutrientValue(entry, key, label) {
-  const nutrient = entry.nutrients?.[key];
-  if (!nutrient || nutrient.value === null || nutrient.value === undefined) {
-    return `<span><strong>${label}</strong>NA</span>`;
-  }
-  return `<span><strong>${label}</strong>${formatPer100GramNutrient(nutrient.value)}${escapeHtml(per100GramUnit(nutrient.unit))}</span>`;
-}
-
-function formatPer100GramNutrient(value) {
-  const number = Number(value) * 100;
-  return Number.isFinite(number) ? formatNumber(number) : "NA";
-}
-
-function per100GramUnit(unit) {
-  return String(unit || "").replace(/\/g\b/g, "/100g");
 }
 
 function renderTotalNutrition(entry, amountGrams) {

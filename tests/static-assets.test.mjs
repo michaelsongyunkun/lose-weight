@@ -161,56 +161,47 @@ test("menu library screen loads the recipe RAG index", async () => {
   assert.match(css, /\.recipe-card/);
 });
 
-test("sidebar menu exposes ingredient nutrition as the fourth RAG screen", async () => {
+test("sidebar menu removes ingredient nutrition as the fourth screen while keeping shopping nutrition data", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
   const rag = JSON.parse(await readFile(new URL("../public/data/ingredient-nutrition-rag.json", import.meta.url), "utf8"));
   const menuLibraryItemIndex = html.indexOf('data-screen="menuLibraryScreen"');
-  const nutritionItemIndex = html.indexOf('data-screen="ingredientNutritionScreen"');
 
   assert.equal(rag.itemCount, 13693);
-  assert.ok(nutritionItemIndex > menuLibraryItemIndex, "ingredient nutrition follows menu library");
-  assert.match(html, /<span>04<\/span>[\s\S]*<strong>食材营养<\/strong>/);
-  assert.match(html, /id="ingredientNutritionScreen"/);
-  assert.match(html, /id="ingredientNutritionGrid"/);
-  assert.match(html, /id="ingredientNutritionSearchInput"/);
+  assert.ok(menuLibraryItemIndex >= 0, "menu library remains in sidebar");
+  assert.doesNotMatch(html, /data-screen="ingredientNutritionScreen"/);
+  assert.doesNotMatch(html, /id="ingredientNutritionScreen"/);
+  assert.doesNotMatch(html, /id="ingredientNutritionGrid"/);
+  assert.doesNotMatch(html, /id="ingredientNutritionSearchInput"/);
   assert.match(app, /NUTRITION_INDEX_URL/);
-  assert.match(app, /function renderIngredientNutrition/);
-  assert.match(css, /\.ingredient-nutrition-screen/);
-  assert.match(css, /\.nutrition-food-grid/);
+  assert.match(app, /function renderNutritionResult/);
+  assert.doesNotMatch(app, /ingredientNutritionScreen/);
+  assert.doesNotMatch(app, /bindIngredientNutritionControls/);
+  assert.doesNotMatch(css, /\.ingredient-nutrition-screen/);
+  assert.doesNotMatch(css, /\.nutrition-food-grid/);
 });
 
-test("menu and ingredient nutrition screens render random samples instead of sequential items", async () => {
+test("menu library screen renders random samples instead of sequential items", async () => {
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const menuRenderer = app.match(/function renderMenuLibrary[\s\S]*?(?=\r?\n\r?\nfunction filterMenuRecipes)/);
-  const nutritionRenderer = app.match(/function renderIngredientNutrition[\s\S]*?(?=\r?\n\r?\nfunction filterIngredientNutrition)/);
 
   assert.ok(menuRenderer, "menu renderer exists");
-  assert.ok(nutritionRenderer, "ingredient nutrition renderer exists");
   assert.match(app, /function pickRandomItems/);
   assert.match(menuRenderer[0], /pickRandomItems\(items,\s*MENU_RENDER_LIMIT\)/);
-  assert.match(nutritionRenderer[0], /pickRandomItems\(items,\s*NUTRITION_RENDER_LIMIT\)/);
   assert.doesNotMatch(menuRenderer[0], /items\.slice\(0,\s*MENU_RENDER_LIMIT\)/);
-  assert.doesNotMatch(nutritionRenderer[0], /items\.slice\(0,\s*NUTRITION_RENDER_LIMIT\)/);
 });
 
-test("ingredient nutrition cards display nutrient values per 100g", async () => {
+test("ingredient nutrition screen renderers are removed from the frontend", async () => {
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
-  const cardRenderer = app.match(/function renderIngredientNutritionCard[\s\S]*?(?=\r?\n\r?\nfunction setIngredientNutritionStatus)/);
-  const valueRenderer = app.match(/function renderNutrientValue[\s\S]*?(?=\r?\n\r?\nfunction renderTotalNutrition)/);
 
-  assert.ok(cardRenderer, "ingredient nutrition card renderer exists");
-  assert.ok(valueRenderer, "nutrient value renderer exists");
-  assert.match(cardRenderer[0], /每 100g 营养值/);
-  assert.doesNotMatch(cardRenderer[0], /每克营养值/);
-  assert.doesNotMatch(cardRenderer[0], /item\.summary/);
-  assert.match(app, /function formatPer100GramNutrient/);
-  assert.match(app, /function per100GramUnit/);
-  assert.match(valueRenderer[0], /formatPer100GramNutrient\(nutrient\.value\)/);
-  assert.match(valueRenderer[0], /per100GramUnit\(nutrient\.unit\)/);
-  assert.match(app, /Number\(value\) \* 100/);
-  assert.match(app, /\/100g/);
+  assert.doesNotMatch(app, /function renderIngredientNutrition\(/);
+  assert.doesNotMatch(app, /function renderIngredientNutritionCard/);
+  assert.doesNotMatch(app, /function renderNutrientValue/);
+  assert.doesNotMatch(app, /function formatPer100GramNutrient/);
+  assert.doesNotMatch(app, /function per100GramUnit/);
+  assert.match(app, /function renderNutritionResult/);
+  assert.match(app, /function renderTotalNutrientValue/);
 });
 
 test("menu library does not expose source file or FDC match rows", async () => {
@@ -228,7 +219,7 @@ test("menu library does not expose source file or FDC match rows", async () => {
 
 test("shopping nutrition renderer only shows purchase-level totals", async () => {
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
-  const renderer = app.match(/function renderNutritionResult[\s\S]*?(?=\r?\n\r?\nfunction renderNutrientValue)/);
+  const renderer = app.match(/function renderNutritionResult[\s\S]*?(?=\r?\n\r?\nfunction renderTotalNutrition)/);
 
   assert.ok(renderer, "renderNutritionResult exists");
   assert.match(renderer[0], /renderTotalNutrition/);
