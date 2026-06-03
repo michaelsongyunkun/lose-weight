@@ -26,6 +26,10 @@
             <span>02</span>
             <strong>规划</strong>
           </button>
+          <button class="side-menu-link" type="button" data-screen="menuLibraryScreen" aria-controls="menuLibraryScreen">
+            <span>03</span>
+            <strong>菜单大全</strong>
+          </button>
         </nav>
         <img class="board-art" src="./assets/meal-prep-board.svg" alt="一周备餐看板">
         <div class="metrics-strip" aria-label="默认规划指标">
@@ -214,6 +218,56 @@
               <section class="view" id="prepView" aria-label="备餐输出"></section>
             </section>
 
+          </div>
+        </section>
+
+        <section class="app-screen menu-library-screen" id="menuLibraryScreen" aria-labelledby="menuLibraryTitle" hidden>
+          <div class="menu-library-shell">
+            <header class="menu-library-header">
+              <div>
+                <p class="eyebrow">Recipe RAG</p>
+                <h2 id="menuLibraryTitle">菜单大全</h2>
+              </div>
+              <div class="menu-library-stats" aria-label="菜单库统计">
+                <span><strong id="menuLibraryCount">0</strong> 道菜</span>
+                <span><strong id="menuLibraryShown">0</strong> 当前显示</span>
+                <span>源食材索引</span>
+              </div>
+            </header>
+
+            <section class="menu-library-controls" aria-label="菜单大全筛选">
+              <label class="menu-search">
+                <span>检索</span>
+                <input id="menuSearchInput" type="search" placeholder="菜名、食材、风味、FDC ID" autocomplete="off">
+              </label>
+              <label>
+                <span>技法</span>
+                <select id="menuTechniqueSelect">
+                  <option value="">全部技法</option>
+                </select>
+              </label>
+              <label>
+                <span>风味</span>
+                <select id="menuFlavorSelect">
+                  <option value="">全部风味</option>
+                </select>
+              </label>
+            </section>
+
+            <section class="ingredient-filter-band" aria-label="常用食材筛选">
+              <div class="ingredient-filter-head">
+                <strong>高频食材</strong>
+                <button class="secondary-button slim-button" id="menuClearFilters" type="button">清除</button>
+              </div>
+              <div class="ingredient-chip-grid" id="menuIngredientChips"></div>
+            </section>
+
+            <section class="menu-result-toolbar" aria-live="polite">
+              <span id="menuLibraryStatus">正在加载菜单 RAG...</span>
+              <span id="menuLibrarySource">RAG</span>
+            </section>
+
+            <section class="recipe-grid" id="menuRecipeGrid" aria-label="菜单大全列表"></section>
           </div>
         </section>
       </main>

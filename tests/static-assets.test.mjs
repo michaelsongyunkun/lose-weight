@@ -26,23 +26,28 @@ test("frontend keeps the core cooking planner form with the output panel", async
   assert.match(app, /updateBmi/);
 });
 
-test("sidebar menu keeps home first and planning second", async () => {
+test("sidebar menu keeps home first, planning second, and menu library third", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
   const homeScreenIndex = html.indexOf('id="homeScreen"');
   const plannerScreenIndex = html.indexOf('id="plannerScreen"');
+  const menuLibraryScreenIndex = html.indexOf('id="menuLibraryScreen"');
   const menuIndex = html.indexOf('class="side-menu"');
   const firstMenuItemIndex = html.indexOf('data-screen="homeScreen"');
   const planningMenuItemIndex = html.indexOf('data-screen="plannerScreen"');
+  const menuLibraryItemIndex = html.indexOf('data-screen="menuLibraryScreen"');
 
   assert.ok(homeScreenIndex >= 0, "home screen exists");
   assert.ok(plannerScreenIndex >= 0, "planning screen exists");
+  assert.ok(menuLibraryScreenIndex >= 0, "menu library screen exists");
   assert.ok(menuIndex >= 0, "left menu exists");
   assert.ok(firstMenuItemIndex > menuIndex, "home menu item exists");
   assert.ok(planningMenuItemIndex > firstMenuItemIndex, "planning menu follows home");
+  assert.ok(menuLibraryItemIndex > planningMenuItemIndex, "menu library follows planning");
   assert.match(html, /<strong>产品首页<\/strong>/);
   assert.match(html, /<strong>规划<\/strong>/);
+  assert.match(html, /<strong>菜单大全<\/strong>/);
   assert.doesNotMatch(html, /<strong>目标与厨房约束<\/strong>[\s\S]*<\/nav>/);
   assert.doesNotMatch(html, /<strong>周计划与采购<\/strong>[\s\S]*<\/nav>/);
   assert.match(html, /目标与厨房约束/);
@@ -53,6 +58,8 @@ test("sidebar menu keeps home first and planning second", async () => {
   assert.match(css, /\.app-screen/);
   assert.match(css, /\.app-screen\.active/);
   assert.match(css, /\.side-menu/);
+  assert.match(css, /\.menu-library-screen/);
+  assert.match(app, /menuLibraryScreen/);
 });
 
 test("product home screen introduction content is blank", async () => {
@@ -121,6 +128,25 @@ test("nutrition RAG data remains available inside the shopping output view", asy
   assert.ok(rag.items.some((item) => item.englishName && item.nutrients?.energyKcal));
   assert.match(html, /id="shoppingView"/);
   assert.match(app, /class="shopping-item-trigger"/);
+});
+
+test("menu library screen loads the recipe RAG index", async () => {
+  const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+  const rag = JSON.parse(await readFile(new URL("../public/data/menu-library-rag.json", import.meta.url), "utf8"));
+
+  assert.equal(rag.itemCount, 3008);
+  assert.equal(rag.items[0].name, "火鸡肉西兰花小炒");
+  assert.ok(rag.facets.topIngredients.includes("盐"));
+  assert.match(html, /id="menuLibraryScreen"/);
+  assert.match(html, /id="menuRecipeGrid"/);
+  assert.match(html, /id="menuSearchInput"/);
+  assert.match(app, /MENU_LIBRARY_URL/);
+  assert.match(app, /function renderMenuLibrary/);
+  assert.match(app, /data-menu-ingredient/);
+  assert.match(css, /\.recipe-grid/);
+  assert.match(css, /\.recipe-card/);
 });
 
 test("planning screen includes the DeepSeek agent panel below the form", async () => {

@@ -2,6 +2,8 @@ const STORAGE_KEY = "deepseekApiKey";
 const LOCAL_APP_ORIGIN = "http://127.0.0.1:4317";
 const LOCAL_APP_ORIGINS = new Set([LOCAL_APP_ORIGIN, "http://localhost:4317"]);
 const NUTRITION_INDEX_URL = appUrl("/data/ingredient-nutrition-rag.json");
+const MENU_LIBRARY_URL = appUrl("/data/menu-library-rag.json");
+const MENU_RENDER_LIMIT = 48;
 const NUTRIENT_DISPLAY_FIELDS = [
   ["energyKcal", "能量"],
   ["proteinG", "蛋白"],
@@ -60,17 +62,31 @@ const agentTitle = document.querySelector("#agentTitle");
 const agentProvider = document.querySelector("#agentProvider");
 const agentKeyPolicy = document.querySelector("#agentKeyPolicy");
 const agentModelPolicy = document.querySelector("#agentModelPolicy");
+const menuSearchInput = document.querySelector("#menuSearchInput");
+const menuTechniqueSelect = document.querySelector("#menuTechniqueSelect");
+const menuFlavorSelect = document.querySelector("#menuFlavorSelect");
+const menuIngredientChips = document.querySelector("#menuIngredientChips");
+const menuRecipeGrid = document.querySelector("#menuRecipeGrid");
+const menuLibraryCount = document.querySelector("#menuLibraryCount");
+const menuLibraryShown = document.querySelector("#menuLibraryShown");
+const menuLibraryStatus = document.querySelector("#menuLibraryStatus");
+const menuLibrarySource = document.querySelector("#menuLibrarySource");
+const menuClearFilters = document.querySelector("#menuClearFilters");
 
 let currentPlan = null;
 let currentMarkdown = "";
 let currentSvg = "";
 let nutritionIndex = null;
 let nutritionIndexPromise = null;
+let menuLibraryIndex = null;
+let menuLibraryPromise = null;
+let activeMenuIngredient = "";
 
 apiKeyInput.value = localStorage.getItem(STORAGE_KEY) || "";
 renderEmpty();
 bindMetricMirrors();
 bindScreenNavigation();
+bindMenuLibraryControls();
 loadNutritionIndex().catch(() => {});
 loadAgentPanel().catch(() => {
   if (agentPromptPreview) {
@@ -140,6 +156,170 @@ function switchScreen(screenId) {
       button.removeAttribute("aria-current");
     }
   });
+
+  if (screenId === "menuLibraryScreen") {
+    ensureMenuLibraryLoaded();
+  }
+}
+
+function bindMenuLibraryControls() {
+  menuSearchInput?.addEventListener("input", renderMenuLibrary);
+  menuTechniqueSelect?.addEventListener("change", renderMenuLibrary);
+  menuFlavorSelect?.addEventListener("change", renderMenuLibrary);
+  menuClearFilters?.addEventListener("click", () => {
+    activeMenuIngredient = "";
+    if (menuSearchInput) menuSearchInput.value = "";
+    if (menuTechniqueSelect) menuTechniqueSelect.value = "";
+    if (menuFlavorSelect) menuFlavorSelect.value = "";
+    renderMenuLibrary();
+  });
+  menuIngredientChips?.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-menu-ingredient]");
+    if (!button) return;
+    const ingredient = button.dataset.menuIngredient || "";
+    activeMenuIngredient = activeMenuIngredient === ingredient ? "" : ingredient;
+    renderMenuLibrary();
+  });
+}
+
+async function ensureMenuLibraryLoaded() {
+  if (menuLibraryIndex) {
+    renderMenuLibrary();
+    return;
+  }
+  if (!menuRecipeGrid) return;
+  menuRecipeGrid.innerHTML = `<div class="menu-empty-state"><strong>正在加载</strong><span>菜单 RAG 正在读取。</span></div>`;
+  setMenuLibraryStatus("正在加载菜单 RAG...");
+  try {
+    const index = await loadMenuLibraryIndex();
+    hydrateMenuLibraryFilters(index);
+    renderMenuLibrary();
+  } catch (error) {
+    setMenuLibraryStatus(`菜单 RAG 加载失败：${error.message}`);
+    menuRecipeGrid.innerHTML = `<div class="menu-empty-state"><strong>加载失败</strong><span>${escapeHtml(error.message)}</span></div>`;
+  }
+}
+
+function loadMenuLibraryIndex() {
+  if (menuLibraryIndex) {
+    return Promise.resolve(menuLibraryIndex);
+  }
+  if (!menuLibraryPromise) {
+    menuLibraryPromise = fetch(MENU_LIBRARY_URL)
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        return response.json();
+      })
+      .then((index) => {
+        menuLibraryIndex = index;
+        return index;
+      });
+  }
+  return menuLibraryPromise;
+}
+
+function hydrateMenuLibraryFilters(index) {
+  if (menuLibraryCount) {
+    menuLibraryCount.textContent = String(index.itemCount || index.items?.length || 0);
+  }
+  if (menuLibrarySource) {
+    menuLibrarySource.textContent = index.source || "菜单 RAG";
+  }
+  hydrateSelect(menuTechniqueSelect, index.facets?.techniques || [], "全部技法");
+  hydrateSelect(menuFlavorSelect, index.facets?.flavors || [], "全部风味");
+  if (menuIngredientChips) {
+    menuIngredientChips.innerHTML = (index.facets?.topIngredients || [])
+      .slice(0, 18)
+      .map((ingredient) => `<button class="ingredient-chip" type="button" data-menu-ingredient="${escapeHtml(ingredient)}">${escapeHtml(ingredient)}</button>`)
+      .join("");
+  }
+}
+
+function hydrateSelect(select, values, emptyLabel) {
+  if (!select) return;
+  const current = select.value;
+  select.innerHTML = [`<option value="">${escapeHtml(emptyLabel)}</option>`]
+    .concat(values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`))
+    .join("");
+  select.value = values.includes(current) ? current : "";
+}
+
+function renderMenuLibrary() {
+  if (!menuLibraryIndex || !menuRecipeGrid) return;
+  const items = filterMenuRecipes(menuLibraryIndex.items || []);
+  const visibleItems = items.slice(0, MENU_RENDER_LIMIT);
+  if (menuLibraryShown) {
+    menuLibraryShown.textContent = String(items.length);
+  }
+  setMenuLibraryStatus(`${items.length} 道匹配菜品${items.length > MENU_RENDER_LIMIT ? `，显示前 ${MENU_RENDER_LIMIT} 道` : ""}`);
+  updateIngredientChips();
+  menuRecipeGrid.innerHTML = visibleItems.length
+    ? visibleItems.map(renderRecipeCard).join("")
+    : `<div class="menu-empty-state"><strong>没有匹配菜品</strong><span>换一个食材、风味或技法。</span></div>`;
+}
+
+function filterMenuRecipes(items) {
+  const keyword = (menuSearchInput?.value || "").trim().toLowerCase();
+  const technique = menuTechniqueSelect?.value || "";
+  const flavor = menuFlavorSelect?.value || "";
+  return items.filter((item) => {
+    if (technique && item.technique !== technique) return false;
+    if (flavor && item.flavor !== flavor) return false;
+    if (activeMenuIngredient && !recipeHasIngredient(item, activeMenuIngredient)) return false;
+    if (!keyword) return true;
+    return String(item.searchText || "").includes(keyword) ||
+      String(item.name || "").toLowerCase().includes(keyword);
+  });
+}
+
+function recipeHasIngredient(item, ingredient) {
+  return (item.ingredients || []).some((entry) => entry.name === ingredient);
+}
+
+function updateIngredientChips() {
+  menuIngredientChips?.querySelectorAll("[data-menu-ingredient]").forEach((button) => {
+    button.classList.toggle("active", button.dataset.menuIngredient === activeMenuIngredient);
+  });
+}
+
+function renderRecipeCard(recipe) {
+  const ingredientLine = (recipe.ingredients || [])
+    .slice(0, 7)
+    .map((item) => item.amount ? `${item.name}${item.amount}` : item.name)
+    .join(" / ");
+  const fdcLine = (recipe.fdcMatches || [])
+    .slice(0, 5)
+    .map((item) => `${item.name}:${item.fdcId}`)
+    .join(" / ");
+  return `
+    <article class="recipe-card">
+      <div class="recipe-card-top">
+        <span>${escapeHtml(String(recipe.id).padStart(4, "0"))}</span>
+        <div>
+          <strong>${escapeHtml(recipe.name)}</strong>
+          <small>${escapeHtml(recipe.servings || "按菜谱份量")}</small>
+        </div>
+      </div>
+      <div class="recipe-tags">
+        <span>${escapeHtml(recipe.technique || "技法")}</span>
+        <span>${escapeHtml(recipe.flavor || "风味")}</span>
+      </div>
+      <p class="recipe-ingredients">${escapeHtml(ingredientLine)}</p>
+      <details class="recipe-method">
+        <summary>制作方式</summary>
+        <p>${escapeHtml(recipe.method)}</p>
+      </details>
+      ${fdcLine ? `<p class="recipe-fdc">${escapeHtml(fdcLine)}</p>` : ""}
+    </article>
+  `;
+}
+
+function setMenuLibraryStatus(text) {
+  if (menuLibraryStatus) {
+    menuLibraryStatus.textContent = text;
+  }
 }
 
 async function requestPlan() {
