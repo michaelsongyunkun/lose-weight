@@ -1,6 +1,7 @@
 import {
   COOKING_AGENT_ID,
   COOKING_AGENT_NAME,
+  COOKING_AGENT_RUNTIME_RULES,
   COOKING_AGENT_SYSTEM_PROMPT
 } from "../domain/cooking-agent-prompt.mjs";
 
@@ -13,6 +14,6 @@ export function createAgentResponse() {
     apiKeyPolicy: "user_provided",
     apiKeyStorage: "browser_local_only",
     apiKeyRequired: true,
-    systemPrompt: COOKING_AGENT_SYSTEM_PROMPT
+    systemPrompt: `${COOKING_AGENT_SYSTEM_PROMPT}\n\n${COOKING_AGENT_RUNTIME_RULES}`
   };
 }

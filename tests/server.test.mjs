@@ -39,6 +39,7 @@ test("GET /api/agent returns the DeepSeek cooking agent prompt", async () => {
     assert.equal(body.apiKeyPolicy, "user_provided");
     assert.equal(body.apiKeyRequired, true);
     assert.match(body.systemPrompt, /# 中式家庭减脂备餐规划师/);
+    assert.match(body.systemPrompt, /暂未命中 RAG，也必须继续生成并保留该采购项/);
   } finally {
     server.close();
   }

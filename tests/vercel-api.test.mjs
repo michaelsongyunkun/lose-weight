@@ -50,6 +50,7 @@ test("Vercel GET /api/agent returns the DeepSeek agent metadata", () => {
   assert.equal(response.payload.apiKeyPolicy, "user_provided");
   assert.equal(response.payload.apiKeyRequired, true);
   assert.match(response.payload.systemPrompt, /# 中式家庭减脂备餐规划师/);
+  assert.match(response.payload.systemPrompt, /暂未命中 RAG，也必须继续生成并保留该采购项/);
 });
 
 test("Vercel POST /api/plan requires an API key", async () => {
