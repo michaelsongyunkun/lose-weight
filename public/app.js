@@ -349,8 +349,8 @@ async function ensureIngredientNutritionLoaded() {
     return;
   }
   if (!ingredientNutritionGrid) return;
-  ingredientNutritionGrid.innerHTML = `<div class="ingredient-nutrition-empty"><strong>正在加载</strong><span>食材营养 RAG 正在读取。</span></div>`;
-  setIngredientNutritionStatus("正在加载食材营养 RAG...");
+  ingredientNutritionGrid.innerHTML = `<div class="ingredient-nutrition-empty"><strong>正在加载</strong><span>食材营养索引正在读取。</span></div>`;
+  setIngredientNutritionStatus("正在加载食材营养索引...");
   try {
     const index = await loadNutritionIndex();
     if (ingredientNutritionCount) {
@@ -358,7 +358,7 @@ async function ensureIngredientNutritionLoaded() {
     }
     renderIngredientNutrition();
   } catch (error) {
-    setIngredientNutritionStatus(`食材营养 RAG 加载失败：${error.message}`);
+    setIngredientNutritionStatus(`食材营养索引加载失败：${error.message}`);
     ingredientNutritionGrid.innerHTML = `<div class="ingredient-nutrition-empty"><strong>加载失败</strong><span>${escapeHtml(error.message)}</span></div>`;
   }
 }
@@ -376,7 +376,7 @@ function renderIngredientNutrition() {
   setIngredientNutritionStatus(`${items.length} 项匹配食材${items.length > NUTRITION_RENDER_LIMIT ? `，随机显示 ${NUTRITION_RENDER_LIMIT} 项` : ""}`);
   ingredientNutritionGrid.innerHTML = visibleItems.length
     ? visibleItems.map(renderIngredientNutritionCard).join("")
-    : `<div class="ingredient-nutrition-empty"><strong>没有匹配食材</strong><span>换一个中文名、英文名或 FDC ID。</span></div>`;
+    : `<div class="ingredient-nutrition-empty"><strong>没有匹配食材</strong><span>换一个中文名、食材名或资料编号。</span></div>`;
 }
 
 function filterIngredientNutrition(items) {
@@ -415,23 +415,88 @@ function nutrientSortValue(item, key) {
 
 function renderIngredientNutritionCard(item) {
   const features = (item.features || []).slice(0, 3);
-  const summary = features.length ? `${features.join(" / ")} / 每 100g 营养值` : "每 100g 营养值";
+  const summary = features.length ? `${features.join(" / ")} / 每 100克 营养值` : "每 100克 营养值";
   return `
     <article class="nutrition-food-card">
       <div class="nutrition-food-top">
         <span>${escapeHtml(String(item.id).padStart(5, "0"))}</span>
         <div>
-          <strong>${escapeHtml(item.name || item.englishName || "未命名食材")}</strong>
-          <small>${escapeHtml(item.englishName || `FDC ${item.fdcId || ""}`)}</small>
+          <strong>${escapeHtml(renderChineseIngredientName(item))}</strong>
+          <small>${escapeHtml(renderIngredientRecordLabel(item))}</small>
         </div>
       </div>
       <div class="nutrition-food-values">
         ${NUTRIENT_DISPLAY_FIELDS.map(([key, label]) => renderNutrientValue(item, key, label)).join("")}
       </div>
       <p class="nutrition-food-summary">${escapeHtml(summary)}</p>
-      <span class="nutrition-food-fdc">FDC ${escapeHtml(item.fdcId || "NA")}</span>
+      <span class="nutrition-food-fdc">资料编号 ${escapeHtml(item.fdcId || item.id || "NA")}</span>
     </article>
   `;
+}
+
+function renderChineseIngredientName(item) {
+  const name = String(item?.name || "");
+  const hint = String(item?.chineseHint || "");
+  if (containsChinese(name)) return name;
+  if (containsChinese(hint)) return hint;
+  return translateEnglishIngredientName(name || item?.englishName) || `食材条目 ${String(item?.id || item?.fdcId || "").padStart(5, "0")}`;
+}
+
+function renderIngredientRecordLabel(item) {
+  return `资料编号 ${item?.fdcId || item?.id || "NA"}`;
+}
+
+function containsChinese(value) {
+  return /[\u4e00-\u9fff]/.test(String(value || ""));
+}
+
+function translateEnglishIngredientName(value) {
+  const text = String(value || "").toLowerCase();
+  if (!/[a-z]/.test(text)) return "";
+
+  const baseRules = [
+    [/applesauce/, "苹果泥"],
+    [/apple cider/, "苹果饮品"],
+    [/\bapple\b/, "苹果"],
+    [/\bcereal\b/, "谷物食品"],
+    [/\bbarley\b/, "大麦"],
+    [/\brice\b/, "米类"],
+    [/\boat\b|\boats\b/, "燕麦"],
+    [/\bwheat\b/, "小麦"],
+    [/\bbean\b|\bbeans\b/, "豆类"],
+    [/\bmilk\b/, "奶类"],
+    [/\begg\b|\beggs\b/, "鸡蛋"],
+    [/\bchicken\b/, "鸡肉"],
+    [/\bbeef\b/, "牛肉"],
+    [/\bpork\b/, "猪肉"],
+    [/\bfish\b/, "鱼类"],
+    [/\bvegetable\b|\bvegetables\b/, "蔬菜"],
+    [/\bfruit\b|\bfruits\b/, "水果"],
+    [/\bbread\b/, "面包"],
+    [/\bsoup\b/, "汤品"],
+    [/\bsauce\b/, "酱汁"],
+    [/\bjuice\b/, "果汁"]
+  ];
+  const descriptorRules = [
+    [/baby|toddler/, "婴幼儿"],
+    [/unsweetened/, "无糖"],
+    [/flavored/, "风味"],
+    [/regular/, "常规"],
+    [/multigrain/, "多谷物"],
+    [/with fruit/, "含水果"],
+    [/ready-to-eat/, "即食"],
+    [/\bdry\b/, "干制"],
+    [/\braw\b/, "生鲜"],
+    [/\bcooked\b/, "熟制"],
+    [/\bfrozen\b/, "冷冻"],
+    [/\bcanned\b/, "罐装"]
+  ];
+  const base = baseRules.find(([pattern]) => pattern.test(text))?.[1];
+  if (!base) return "";
+  const descriptors = descriptorRules
+    .filter(([pattern]) => pattern.test(text))
+    .map(([, label]) => label);
+  return [...new Set(descriptors.concat(base))].join("");
 }
 
 function setIngredientNutritionStatus(text) {
@@ -1027,7 +1092,12 @@ function formatPer100GramNutrient(value) {
 }
 
 function per100GramUnit(unit) {
-  return String(unit || "").replace(/\/g\b/g, "/100g");
+  const normalized = String(unit || "").trim().toLowerCase();
+  if (normalized === "kcal/g") return "千卡/100克";
+  if (normalized === "g/g") return "克/100克";
+  if (normalized === "mg/g") return "毫克/100克";
+  if (normalized === "ug/g" || normalized === "µg/g") return "微克/100克";
+  return normalized ? "每100克" : "";
 }
 
 function renderTotalNutrition(entry, amountGrams) {

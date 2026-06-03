@@ -181,6 +181,34 @@ test("sidebar menu exposes ingredient nutrition as the fourth RAG screen", async
   assert.match(css, /\.nutrition-food-grid/);
 });
 
+test("ingredient nutrition screen hides English-facing copy and source names", async () => {
+  const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const screen = html.match(/<section class="app-screen ingredient-nutrition-screen"[\s\S]*?<\/section>/);
+  const cardRenderer = app.match(/function renderIngredientNutritionCard[\s\S]*?(?=\n\nfunction setIngredientNutritionStatus)/);
+
+  assert.ok(screen, "ingredient nutrition screen exists");
+  assert.ok(cardRenderer, "ingredient nutrition card renderer exists");
+  assert.doesNotMatch(screen[0], /Nutrition RAG/);
+  assert.doesNotMatch(screen[0], /FDC ID/);
+  assert.doesNotMatch(screen[0], /英文名/);
+  assert.doesNotMatch(screen[0], /每 1g/);
+  assert.doesNotMatch(screen[0], /100g/);
+  assert.match(screen[0], /营养索引/);
+  assert.match(screen[0], /资料编号/);
+  assert.match(screen[0], /每 100克 营养/);
+  assert.doesNotMatch(cardRenderer[0], /item\.englishName/);
+  assert.doesNotMatch(cardRenderer[0], /FDC/);
+  assert.match(cardRenderer[0], /renderChineseIngredientName/);
+  assert.match(app, /function renderChineseIngredientName/);
+  assert.match(app, /function translateEnglishIngredientName/);
+  assert.match(app, /千卡\/100克/);
+  assert.match(app, /克\/100克/);
+  assert.match(app, /毫克\/100克/);
+  assert.doesNotMatch(app, /食材营养 RAG/);
+  assert.doesNotMatch(app, /换一个中文名、英文名/);
+});
+
 test("menu and ingredient nutrition screens render random samples instead of sequential items", async () => {
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const menuRenderer = app.match(/function renderMenuLibrary[\s\S]*?(?=\n\nfunction filterMenuRecipes)/);
@@ -195,14 +223,15 @@ test("menu and ingredient nutrition screens render random samples instead of seq
   assert.doesNotMatch(nutritionRenderer[0], /items\.slice\(0,\s*NUTRITION_RENDER_LIMIT\)/);
 });
 
-test("ingredient nutrition cards display nutrient values per 100g", async () => {
+test("ingredient nutrition cards display nutrient values per 100 grams", async () => {
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const cardRenderer = app.match(/function renderIngredientNutritionCard[\s\S]*?(?=\n\nfunction setIngredientNutritionStatus)/);
   const valueRenderer = app.match(/function renderNutrientValue[\s\S]*?(?=\n\nfunction renderTotalNutrition)/);
 
   assert.ok(cardRenderer, "ingredient nutrition card renderer exists");
   assert.ok(valueRenderer, "nutrient value renderer exists");
-  assert.match(cardRenderer[0], /每 100g 营养值/);
+  assert.match(cardRenderer[0], /每 100克 营养值/);
+  assert.doesNotMatch(cardRenderer[0], /每 100g 营养值/);
   assert.doesNotMatch(cardRenderer[0], /每克营养值/);
   assert.doesNotMatch(cardRenderer[0], /item\.summary/);
   assert.match(app, /function formatPer100GramNutrient/);
@@ -210,7 +239,7 @@ test("ingredient nutrition cards display nutrient values per 100g", async () => 
   assert.match(valueRenderer[0], /formatPer100GramNutrient\(nutrient\.value\)/);
   assert.match(valueRenderer[0], /per100GramUnit\(nutrient\.unit\)/);
   assert.match(app, /Number\(value\) \* 100/);
-  assert.match(app, /\/100g/);
+  assert.match(app, /100克/);
 });
 
 test("menu library does not expose source file or FDC match rows", async () => {
