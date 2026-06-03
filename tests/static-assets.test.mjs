@@ -149,6 +149,19 @@ test("menu library screen loads the recipe RAG index", async () => {
   assert.match(css, /\.recipe-card/);
 });
 
+test("shopping nutrition renderer only shows purchase-level totals", async () => {
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const renderer = app.match(/function renderNutritionResult[\s\S]*?(?=\n\nfunction renderNutrientValue)/);
+
+  assert.ok(renderer, "renderNutritionResult exists");
+  assert.match(renderer[0], /renderTotalNutrition/);
+  assert.doesNotMatch(renderer[0], /sourceLabel/);
+  assert.doesNotMatch(renderer[0], /nutrition-card-head/);
+  assert.doesNotMatch(renderer[0], /nutrition-values/);
+  assert.doesNotMatch(renderer[0], /nutrition-alternatives/);
+  assert.doesNotMatch(renderer[0], /RAG/);
+});
+
 test("planning screen includes the DeepSeek agent panel below the form", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");

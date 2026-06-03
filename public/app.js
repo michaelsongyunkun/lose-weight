@@ -799,34 +799,32 @@ function scoreNutritionEntry(entry, query) {
 }
 
 function renderNutritionResult(result, item, index) {
+  const amountGrams = parseAmountGrams(item?.amount || shoppingItemDisplay(item));
+
   if (!result.matches.length) {
     return `
       <div class="nutrition-empty">
-        <strong>未找到精准匹配</strong>
-        <span>文档中暂时没有与“${escapeHtml(result.query.label)}”足够接近的条目。来源库：${escapeHtml(index.dataSource || "营养文档")}。</span>
+        <strong>采购整体营养暂不可估算</strong>
+        <span>当前采购项没有足够接近的营养数据。</span>
       </div>
     `;
   }
 
-  const [best, ...alternatives] = result.matches;
+  if (!amountGrams) {
+    return `
+      <div class="nutrition-empty">
+        <strong>采购整体营养暂不可估算</strong>
+        <span>请在采购数量里写明克或千克，例如 300g 或 0.5kg。</span>
+      </div>
+    `;
+  }
+
+  const [best] = result.matches;
   const entry = best.entry;
-  const amountGrams = parseAmountGrams(item?.amount || shoppingItemDisplay(item));
-  const sourceLabel = result.status === "matched" ? "RAG 命中" : "相近候选";
 
   return `
-    <div class="nutrition-card">
-      <div class="nutrition-card-head">
-        <strong>${sourceLabel}</strong>
-        <span>每 1g 约含量 · USDA FDC ${escapeHtml(entry.fdcId)}</span>
-      </div>
-      <p class="nutrition-entry-name">${escapeHtml(entry.name || entry.englishName)}</p>
-      ${entry.englishName && entry.englishName !== entry.name ? `<p class="nutrition-entry-subname">${escapeHtml(entry.englishName)}</p>` : ""}
-      <div class="nutrition-values">
-        ${NUTRIENT_DISPLAY_FIELDS.map(([key, label]) => renderNutrientValue(entry, key, label)).join("")}
-      </div>
-      ${entry.features?.length ? `<p class="nutrition-tags">${entry.features.map(escapeHtml).join(" / ")}</p>` : ""}
-      ${amountGrams ? renderTotalNutrition(entry, amountGrams) : ""}
-      ${alternatives.length ? `<details class="nutrition-alternatives"><summary>查看其他候选</summary><ul>${alternatives.map((match) => `<li>${escapeHtml(match.entry.name)}${match.entry.englishName && match.entry.englishName !== match.entry.name ? ` · ${escapeHtml(match.entry.englishName)}` : ""}</li>`).join("")}</ul></details>` : ""}
+    <div class="nutrition-card nutrition-card-total-only">
+      ${renderTotalNutrition(entry, amountGrams)}
     </div>
   `;
 }
