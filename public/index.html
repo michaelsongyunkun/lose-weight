@@ -186,6 +186,34 @@
               </details>
             </section>
 
+            <section class="result-panel" id="resultPanel" aria-labelledby="planTitle">
+              <div class="row-heading">
+                <div>
+                  <p class="eyebrow">Output</p>
+                  <h3 id="planTitle">输出</h3>
+                </div>
+                <div class="output-actions">
+                  <button class="secondary-button" id="copyButton" type="button" disabled>复制 MD</button>
+                  <button class="primary-button" id="downloadButton" type="button" disabled>下载 SVG</button>
+                </div>
+              </div>
+
+              <div class="status-banner" id="statusBanner">
+                <strong>Ready</strong>
+                <span>等待生成。</span>
+              </div>
+
+              <div class="tabs" role="tablist" aria-label="输出视图">
+                <button class="tab active" type="button" data-view="week" role="tab" aria-selected="true">周计划</button>
+                <button class="tab" type="button" data-view="shopping" role="tab" aria-selected="false">采购</button>
+                <button class="tab" type="button" data-view="prep" role="tab" aria-selected="false">备餐</button>
+              </div>
+
+              <section class="view active" id="weekView" aria-label="周计划输出"></section>
+              <section class="view" id="shoppingView" aria-label="采购输出"></section>
+              <section class="view" id="prepView" aria-label="备餐输出"></section>
+            </section>
+
           </div>
         </section>
       </main>

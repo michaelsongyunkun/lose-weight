@@ -103,9 +103,13 @@ downloadButton?.addEventListener("click", () => {
 
 document.querySelectorAll(".tab").forEach((button) => {
   button.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach((tab) => tab.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach((tab) => {
+      tab.classList.remove("active");
+      tab.setAttribute("aria-selected", "false");
+    });
     document.querySelectorAll(".view").forEach((view) => view.classList.remove("active"));
     button.classList.add("active");
+    button.setAttribute("aria-selected", "true");
     document.querySelector(`#${button.dataset.view}View`)?.classList.add("active");
   });
 });
@@ -249,9 +253,9 @@ function collectProfile() {
 
 function renderEmpty() {
   if (!weekView || !shoppingView || !prepView) return;
-  weekView.innerHTML = `<div class="empty-state"><div><h3>一周计划</h3><p>生成后显示每日餐单、热量和做法。</p></div></div>`;
-  shoppingView.innerHTML = `<div class="empty-state"><div><h3>采购清单</h3><p>生成后按食材类型分组。</p></div></div>`;
-  prepView.innerHTML = `<div class="empty-state"><div><h3>备餐节奏</h3><p>生成后显示周末和工作日任务。</p></div></div>`;
+  weekView.innerHTML = `<div class="empty-state"><div><h3>等待生成</h3><p>周计划会显示在这里。</p></div></div>`;
+  shoppingView.innerHTML = `<div class="empty-state"><div><h3>等待生成</h3><p>采购清单会显示在这里。</p></div></div>`;
+  prepView.innerHTML = `<div class="empty-state"><div><h3>等待生成</h3><p>备餐流程会显示在这里。</p></div></div>`;
 }
 
 function renderPlan(plan) {

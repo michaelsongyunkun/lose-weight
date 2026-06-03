@@ -2,7 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-test("frontend keeps the core cooking planner form without the output panel", async () => {
+test("frontend keeps the core cooking planner form with the output panel", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
 
@@ -12,11 +12,13 @@ test("frontend keeps the core cooking planner form without the output panel", as
   assert.match(html, /id="heightCm"/);
   assert.match(html, /id="weightKg"/);
   assert.match(html, /id="metricBmi"/);
-  assert.doesNotMatch(html, /id="resultPanel"/);
-  assert.doesNotMatch(html, /id="planTitle"/);
-  assert.doesNotMatch(html, /id="weekView"/);
-  assert.doesNotMatch(html, /id="shoppingView"/);
-  assert.doesNotMatch(html, /id="prepView"/);
+  assert.match(html, /id="resultPanel"/);
+  assert.match(html, /id="planTitle"/);
+  assert.match(html, /id="weekView"/);
+  assert.match(html, /id="shoppingView"/);
+  assert.match(html, /id="prepView"/);
+  assert.match(html, /id="copyButton"[\s\S]*disabled/);
+  assert.match(html, /id="downloadButton"[\s\S]*disabled/);
   assert.match(app, /deepseekApiKey/);
   assert.match(app, /\/api\/plan/);
   assert.match(app, /heightCm:\s*Number\(data\.get\("heightCm"\)\)/);
@@ -87,35 +89,38 @@ test("generation requires a user supplied API key and exposes no demo entry", as
   assert.match(app, /return path;/);
 });
 
-test("planner screen removes the weekly plan shopping section and actions", async () => {
+test("planner screen keeps output views below the agent panel", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const plannerStart = html.indexOf('<section class="app-screen planner-screen" id="plannerScreen"');
   const formIndex = html.indexOf('id="plannerForm"');
+  const agentIndex = html.indexOf('id="cookingAgentPanel"');
+  const resultIndex = html.indexOf('id="resultPanel"');
   const plannerEnd = html.indexOf("</section>", plannerStart);
 
   assert.ok(plannerStart >= 0, "planner panel exists");
   assert.ok(formIndex > plannerStart, "form is inside planner panel");
   assert.ok(formIndex < plannerEnd, "form remains inside planner panel");
-  assert.doesNotMatch(html, /id="resultPanel"/);
-  assert.doesNotMatch(html, /id="copyButton"/);
-  assert.doesNotMatch(html, /id="downloadButton"/);
-  assert.doesNotMatch(html, /role="tablist"/);
-  assert.doesNotMatch(html, /data-view="week"/);
-  assert.doesNotMatch(html, /data-view="shopping"/);
-  assert.doesNotMatch(html, /data-view="prep"/);
+  assert.ok(agentIndex > formIndex, "agent panel follows form");
+  assert.ok(resultIndex > agentIndex, "output panel follows agent panel");
+  assert.match(html, /role="tablist"/);
+  assert.match(html, /data-view="week"/);
+  assert.match(html, /data-view="shopping"/);
+  assert.match(html, /data-view="prep"/);
   assert.match(app, /copyButton\?\.addEventListener/);
   assert.match(app, /downloadButton\?\.addEventListener/);
+  assert.match(app, /setAttribute\("aria-selected", "true"\)/);
 });
 
-test("nutrition RAG data remains available without a visible shopping panel", async () => {
+test("nutrition RAG data remains available inside the shopping output view", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
   const rag = JSON.parse(await readFile(new URL("../public/data/ingredient-nutrition-rag.json", import.meta.url), "utf8"));
 
   assert.equal(rag.itemCount, 13693);
   assert.ok(rag.items.some((item) => item.englishName && item.nutrients?.energyKcal));
-  assert.doesNotMatch(html, /id="shoppingView"/);
-  assert.doesNotMatch(html, /class="shopping-item-trigger"/);
+  assert.match(html, /id="shoppingView"/);
+  assert.match(app, /class="shopping-item-trigger"/);
 });
 
 test("planning screen includes the DeepSeek agent panel below the form", async () => {
