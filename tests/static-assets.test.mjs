@@ -117,3 +117,19 @@ test("nutrition RAG data remains available without a visible shopping panel", as
   assert.doesNotMatch(html, /id="shoppingView"/);
   assert.doesNotMatch(html, /class="shopping-item-trigger"/);
 });
+
+test("planning screen includes the DeepSeek agent panel below the form", async () => {
+  const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+  const formIndex = html.indexOf('id="plannerForm"');
+  const agentIndex = html.indexOf('id="cookingAgentPanel"');
+
+  assert.ok(agentIndex > formIndex, "agent panel follows the planning form");
+  assert.match(html, /id="agentPromptPreview"/);
+  assert.match(html, /DeepSeek/);
+  assert.match(html, /API Key 由用户提供/);
+  assert.match(app, /\/api\/agent/);
+  assert.match(app, /agent\.systemPrompt/);
+  assert.match(css, /\.agent-panel/);
+});

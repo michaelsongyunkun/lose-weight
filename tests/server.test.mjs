@@ -26,6 +26,24 @@ test("GET /api/health returns ok", async () => {
   }
 });
 
+test("GET /api/agent returns the DeepSeek cooking agent prompt", async () => {
+  const server = createCookingCoachServer();
+  const baseUrl = await listen(server);
+
+  try {
+    const response = await fetch(`${baseUrl}/api/agent`);
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(body.provider, "DeepSeek");
+    assert.equal(body.apiKeyPolicy, "user_provided");
+    assert.equal(body.apiKeyRequired, true);
+    assert.match(body.systemPrompt, /# 中式家庭减脂备餐规划师/);
+  } finally {
+    server.close();
+  }
+});
+
 test("local server allows file-opened frontend requests", async () => {
   const server = createCookingCoachServer();
   const baseUrl = await listen(server);

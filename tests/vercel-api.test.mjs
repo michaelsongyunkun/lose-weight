@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 
+import agentHandler from "../api/agent.js";
 import healthHandler from "../api/health.js";
 import { createPlanHandler } from "../api/plan.js";
 
@@ -37,6 +38,18 @@ test("Vercel GET /api/health returns ok", () => {
   assert.equal(response.statusCode, 200);
   assert.equal(response.payload.ok, true);
   assert.equal(response.headers.get("cache-control"), "no-store");
+});
+
+test("Vercel GET /api/agent returns the DeepSeek agent metadata", () => {
+  const response = createResponse();
+
+  agentHandler({ method: "GET", headers: {} }, response);
+
+  assert.equal(response.statusCode, 200);
+  assert.equal(response.payload.provider, "DeepSeek");
+  assert.equal(response.payload.apiKeyPolicy, "user_provided");
+  assert.equal(response.payload.apiKeyRequired, true);
+  assert.match(response.payload.systemPrompt, /# 中式家庭减脂备餐规划师/);
 });
 
 test("Vercel POST /api/plan requires an API key", async () => {

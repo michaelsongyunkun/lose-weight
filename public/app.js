@@ -55,6 +55,11 @@ const prepView = document.querySelector("#prepView");
 const appScreens = document.querySelectorAll(".app-screen");
 const screenControls = document.querySelectorAll("[data-screen]");
 const menuButtons = document.querySelectorAll(".side-menu-link");
+const agentPromptPreview = document.querySelector("#agentPromptPreview");
+const agentTitle = document.querySelector("#agentTitle");
+const agentProvider = document.querySelector("#agentProvider");
+const agentKeyPolicy = document.querySelector("#agentKeyPolicy");
+const agentModelPolicy = document.querySelector("#agentModelPolicy");
 
 let currentPlan = null;
 let currentMarkdown = "";
@@ -67,6 +72,11 @@ renderEmpty();
 bindMetricMirrors();
 bindScreenNavigation();
 loadNutritionIndex().catch(() => {});
+loadAgentPanel().catch(() => {
+  if (agentPromptPreview) {
+    agentPromptPreview.textContent = "Agent system prompt 暂时无法加载。";
+  }
+});
 
 form.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -184,6 +194,30 @@ function appUrl(path) {
 
 function isLocalHost(hostname) {
   return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
+}
+
+async function loadAgentPanel() {
+  if (!agentPromptPreview) return;
+  const response = await fetch(appUrl("/api/agent"));
+  if (!response.ok) {
+    throw new Error(`HTTP ${response.status}`);
+  }
+  const agent = await response.json();
+  if (agentTitle && agent.name) {
+    agentTitle.textContent = agent.name;
+  }
+  agentPromptPreview.textContent = agent.systemPrompt || "";
+  if (agentProvider) {
+    agentProvider.textContent = agent.provider || "DeepSeek";
+  }
+  if (agentKeyPolicy) {
+    agentKeyPolicy.textContent = agent.apiKeyRequired
+      ? "API Key 由用户提供"
+      : "API Key 未启用";
+  }
+  if (agentModelPolicy && Array.isArray(agent.modelOptions)) {
+    agentModelPolicy.textContent = agent.modelOptions.join(" / ");
+  }
 }
 
 function formatRequestError(error) {

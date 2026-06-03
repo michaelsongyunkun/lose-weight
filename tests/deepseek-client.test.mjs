@@ -7,6 +7,7 @@ import {
   buildDeepSeekPayload,
   generatePlanWithDeepSeek
 } from "../src/server/deepseek-client.mjs";
+import { COOKING_AGENT_SYSTEM_PROMPT } from "../src/domain/cooking-agent-prompt.mjs";
 
 const profile = {
   days: 3,
@@ -33,22 +34,23 @@ test("buildDeepSeekPayload requests JSON output from DeepSeek", () => {
   assert.equal(payload.messages[0].role, "system");
   assert.notEqual(payload.messages[0].content, COOKING_SYSTEM_PROMPT);
   assert.equal(payload.messages[0].content, buildCookingSystemPrompt(profile));
-  assert.match(payload.messages[0].content, /中式家庭减脂备餐规划师/);
-  assert.match(payload.messages[0].content, /本次用户身体指标/);
+  assert.match(payload.messages[0].content, /# 中式家庭减脂备餐规划师/);
+  assert.match(payload.messages[0].content, /个性化备餐计划生成/);
+  assert.match(payload.messages[0].content, /精准采购与费用估算/);
+  assert.match(payload.messages[0].content, /分场景备餐指南/);
   assert.match(payload.messages[0].content, /主用户身高：170 cm/);
   assert.match(payload.messages[0].content, /主用户体重：70 kg/);
-  assert.match(payload.messages[0].content, /主用户 BMI：24\.2（偏高）/);
+  assert.match(payload.messages[0].content, /主用户BMI：24\.2（偏高）/);
   assert.match(payload.messages[0].content, /主用户每日蛋白目标：84-112 g/);
-  assert.match(payload.messages[0].content, /身体指标驱动规则/);
-  assert.match(payload.messages[0].content, /菜品制作细节拆解/);
   assert.match(payload.messages[0].content, /steps 至少 5 步/);
   assert.match(payload.messages[0].content, /切配形态、调味比例、锅具或设备、火候、时长、熟成判断/);
-  assert.match(payload.messages[0].content, /RAG 食材闭环/);
+  assert.match(payload.messages[0].content, /本地食材营养 RAG/);
   assert.match(payload.messages[0].content, /shoppingList\.name 或用户现有食材/);
   assert.match(payload.messages[0].content, /weeklyPlan/);
   assert.match(payload.messages[0].content, /mealPrepGuide/);
-  assert.match(payload.messages[0].content, /每个采购食材/);
+  assert.match(payload.messages[0].content, /每项食材的市场价格/);
   assert.match(payload.messages[0].content, /estimatedCost/);
+  assert.ok(payload.messages[0].content.startsWith(COOKING_AGENT_SYSTEM_PROMPT));
   assert.match(payload.messages[1].content, /只输出 JSON/);
   assert.match(payload.messages[1].content, /主用户 BMI: 24\.2/);
   assert.match(payload.messages[1].content, /steps 至少 5 步/);

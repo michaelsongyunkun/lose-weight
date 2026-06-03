@@ -322,6 +322,7 @@ h3 {
 }
 
 .planner-form,
+.agent-panel,
 .result-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -411,6 +412,111 @@ select:focus {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.agent-panel {
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+}
+
+.agent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+}
+
+.agent-header h3 {
+  margin-bottom: 0;
+  font-size: 22px;
+}
+
+.agent-badges {
+  display: flex;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.agent-badges span {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: #f2efe6;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.agent-badges span:first-child {
+  background: var(--ink);
+  color: var(--mustard);
+}
+
+.agent-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.agent-summary-grid article {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #ffffff;
+  display: grid;
+  gap: 8px;
+}
+
+.agent-summary-grid span {
+  color: var(--tomato);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.agent-summary-grid strong {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.agent-summary-grid small {
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.agent-prompt-box {
+  border: 1px solid rgba(63, 111, 143, 0.25);
+  border-radius: 8px;
+  background: #f8fbfc;
+  overflow: hidden;
+}
+
+.agent-prompt-box summary {
+  min-height: 44px;
+  padding: 0 14px;
+  display: flex;
+  align-items: center;
+  color: var(--blue);
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.agent-prompt-box pre {
+  max-height: 440px;
+  margin: 0;
+  padding: 14px;
+  border-top: 1px solid rgba(63, 111, 143, 0.2);
+  overflow: auto;
+  background: #ffffff;
+  color: var(--ink);
+  font-family: "Cascadia Mono", "Microsoft YaHei", monospace;
+  font-size: 12px;
+  line-height: 1.65;
+  white-space: pre-wrap;
 }
 
 button {
@@ -895,6 +1001,8 @@ button:disabled {
   .form-grid.two,
   .inline-row.compact,
   .side-menu,
+  .agent-header,
+  .agent-summary-grid,
   .home-proof,
   .shopping-grid,
   .prep-card {

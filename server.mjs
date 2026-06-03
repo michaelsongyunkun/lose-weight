@@ -5,6 +5,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { createPlanResponse, errorToPayload } from "./src/server/plan-response.mjs";
+import { createAgentResponse } from "./src/server/agent-response.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -33,6 +34,10 @@ export function createCookingCoachServer({ fetchImpl = globalThis.fetch } = {}) 
 
       if (request.method === "GET" && url.pathname === "/api/health") {
         return sendJson(response, 200, { ok: true, name: "ai-cooking-coach" }, request);
+      }
+
+      if (request.method === "GET" && url.pathname === "/api/agent") {
+        return sendJson(response, 200, createAgentResponse(), request);
       }
 
       if (request.method === "POST" && url.pathname === "/api/plan") {

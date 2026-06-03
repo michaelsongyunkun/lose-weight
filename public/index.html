@@ -149,6 +149,43 @@
               </div>
             </form>
 
+            <section class="agent-panel" id="cookingAgentPanel" aria-labelledby="agentTitle">
+              <div class="agent-header">
+                <div>
+                  <p class="eyebrow">Agent</p>
+                  <h3 id="agentTitle">家庭备餐 Agent</h3>
+                </div>
+                <div class="agent-badges" aria-label="Agent 运行设置">
+                  <span id="agentProvider">DeepSeek</span>
+                  <span id="agentKeyPolicy">API Key 由用户提供</span>
+                  <span id="agentModelPolicy">deepseek-v4-flash / pro</span>
+                </div>
+              </div>
+
+              <div class="agent-summary-grid">
+                <article>
+                  <span>01</span>
+                  <strong>个性化备餐计划</strong>
+                  <small>家庭人数、计划天数、热量目标、口味偏好</small>
+                </article>
+                <article>
+                  <span>02</span>
+                  <strong>采购与费用估算</strong>
+                  <small>食材合并、预算控制、每项预计花费</small>
+                </article>
+                <article>
+                  <span>03</span>
+                  <strong>备餐执行指南</strong>
+                  <small>周日批量处理、工作日复热、冷藏冷冻</small>
+                </article>
+              </div>
+
+              <details class="agent-prompt-box" open>
+                <summary>System Prompt</summary>
+                <pre id="agentPromptPreview">正在加载 Agent system prompt...</pre>
+              </details>
+            </section>
+
           </div>
         </section>
       </main>
