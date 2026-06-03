@@ -195,6 +195,24 @@ test("menu and ingredient nutrition screens render random samples instead of seq
   assert.doesNotMatch(nutritionRenderer[0], /items\.slice\(0,\s*NUTRITION_RENDER_LIMIT\)/);
 });
 
+test("ingredient nutrition cards display nutrient values per 100g", async () => {
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const cardRenderer = app.match(/function renderIngredientNutritionCard[\s\S]*?(?=\n\nfunction setIngredientNutritionStatus)/);
+  const valueRenderer = app.match(/function renderNutrientValue[\s\S]*?(?=\n\nfunction renderTotalNutrition)/);
+
+  assert.ok(cardRenderer, "ingredient nutrition card renderer exists");
+  assert.ok(valueRenderer, "nutrient value renderer exists");
+  assert.match(cardRenderer[0], /每 100g 营养值/);
+  assert.doesNotMatch(cardRenderer[0], /每克营养值/);
+  assert.doesNotMatch(cardRenderer[0], /item\.summary/);
+  assert.match(app, /function formatPer100GramNutrient/);
+  assert.match(app, /function per100GramUnit/);
+  assert.match(valueRenderer[0], /formatPer100GramNutrient\(nutrient\.value\)/);
+  assert.match(valueRenderer[0], /per100GramUnit\(nutrient\.unit\)/);
+  assert.match(app, /Number\(value\) \* 100/);
+  assert.match(app, /\/100g/);
+});
+
 test("menu library does not expose source file or FDC match rows", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");

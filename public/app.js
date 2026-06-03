@@ -415,6 +415,7 @@ function nutrientSortValue(item, key) {
 
 function renderIngredientNutritionCard(item) {
   const features = (item.features || []).slice(0, 3);
+  const summary = features.length ? `${features.join(" / ")} / 每 100g 营养值` : "每 100g 营养值";
   return `
     <article class="nutrition-food-card">
       <div class="nutrition-food-top">
@@ -427,7 +428,7 @@ function renderIngredientNutritionCard(item) {
       <div class="nutrition-food-values">
         ${NUTRIENT_DISPLAY_FIELDS.map(([key, label]) => renderNutrientValue(item, key, label)).join("")}
       </div>
-      <p class="nutrition-food-summary">${escapeHtml(features.length ? features.join(" / ") : item.summary || "每克营养值")}</p>
+      <p class="nutrition-food-summary">${escapeHtml(summary)}</p>
       <span class="nutrition-food-fdc">FDC ${escapeHtml(item.fdcId || "NA")}</span>
     </article>
   `;
@@ -1017,7 +1018,16 @@ function renderNutrientValue(entry, key, label) {
   if (!nutrient || nutrient.value === null || nutrient.value === undefined) {
     return `<span><strong>${label}</strong>NA</span>`;
   }
-  return `<span><strong>${label}</strong>${formatNumber(nutrient.value)}${escapeHtml(nutrient.unit)}</span>`;
+  return `<span><strong>${label}</strong>${formatPer100GramNutrient(nutrient.value)}${escapeHtml(per100GramUnit(nutrient.unit))}</span>`;
+}
+
+function formatPer100GramNutrient(value) {
+  const number = Number(value) * 100;
+  return Number.isFinite(number) ? formatNumber(number) : "NA";
+}
+
+function per100GramUnit(unit) {
+  return String(unit || "").replace(/\/g\b/g, "/100g");
 }
 
 function renderTotalNutrition(entry, amountGrams) {
