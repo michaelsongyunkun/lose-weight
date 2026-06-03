@@ -81,8 +81,10 @@ test("generation requires a user supplied API key and exposes no demo entry", as
   assert.match(app, /LOCAL_APP_ORIGINS/);
   assert.match(app, /function appUrl/);
   assert.match(app, /LOCAL_APP_ORIGINS\.has\(location\.origin\)/);
+  assert.match(app, /location\.protocol === "file:"/);
+  assert.match(app, /function isLocalHost/);
   assert.match(app, /`\$\{LOCAL_APP_ORIGIN\}\$\{path\}`/);
-  assert.doesNotMatch(app, /location\.protocol === "file:" \? `\$\{LOCAL_APP_ORIGIN\}\$\{path\}` : path/);
+  assert.match(app, /return path;/);
 });
 
 test("planner screen removes the weekly plan shopping section and actions", async () => {

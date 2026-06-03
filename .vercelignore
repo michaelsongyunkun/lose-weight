@@ -1,8 +1,8 @@
 node_modules/
+.git/
+.vercel/
 .env
 .env.*
 dev-server.*
 npm-debug.log*
 coverage/
-.DS_Store
-.vercel/

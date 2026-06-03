@@ -176,7 +176,14 @@ function appUrl(path) {
   if (LOCAL_APP_ORIGINS.has(location.origin)) {
     return path;
   }
-  return `${LOCAL_APP_ORIGIN}${path}`;
+  if (location.protocol === "file:" || isLocalHost(location.hostname)) {
+    return `${LOCAL_APP_ORIGIN}${path}`;
+  }
+  return path;
+}
+
+function isLocalHost(hostname) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
 function formatRequestError(error) {

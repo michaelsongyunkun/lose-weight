@@ -4,8 +4,7 @@ import { createReadStream } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import { validateProfile } from "./src/domain/prompt-builder.mjs";
-import { generatePlanWithDeepSeek } from "./src/server/deepseek-client.mjs";
+import { createPlanResponse, errorToPayload } from "./src/server/plan-response.mjs";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PUBLIC_DIR = path.join(__dirname, "public");
@@ -48,40 +47,15 @@ export function createCookingCoachServer({ fetchImpl = globalThis.fetch } = {}) 
 
       sendJson(response, 405, { error: "Method not allowed" }, request);
     } catch (error) {
-      sendJson(response, error.status || 500, {
-        error: error.message || "服务器错误",
-        details: error.details
-      }, request);
+      sendJson(response, error.status || 500, errorToPayload(error), request);
     }
   });
 }
 
 async function handlePlanRequest(request, response, fetchImpl) {
   const body = await readJson(request);
-  const validation = validateProfile(body.profile || {});
-
-  if (!validation.valid) {
-    return sendJson(response, 400, {
-      error: "规划参数无效。",
-      details: validation.errors
-    }, request);
-  }
-
-  const apiKey = String(body.apiKey || "").trim();
-  if (!apiKey) {
-    return sendJson(response, 400, {
-      error: "请先提交 DeepSeek API Key 后再生成备餐计划。"
-    }, request);
-  }
-
-  const plan = await generatePlanWithDeepSeek({
-    apiKey,
-    profile: validation.profile,
-    model: body.model || "deepseek-v4-flash",
-    fetchImpl
-  });
-
-  sendJson(response, 200, { mode: "live", plan }, request);
+  const payload = await createPlanResponse(body, { fetchImpl });
+  sendJson(response, 200, payload, request);
 }
 
 function readJson(request) {
@@ -91,7 +65,7 @@ function readJson(request) {
     request.on("data", (chunk) => {
       data += chunk;
       if (data.length > 128_000) {
-        reject(Object.assign(new Error("请求体过大。"), { status: 413 }));
+        reject(Object.assign(new Error("Request body is too large."), { status: 413 }));
         request.destroy();
       }
     });
@@ -100,7 +74,7 @@ function readJson(request) {
       try {
         resolve(JSON.parse(data));
       } catch {
-        reject(Object.assign(new Error("请求 JSON 无法解析。"), { status: 400 }));
+        reject(Object.assign(new Error("Request JSON could not be parsed."), { status: 400 }));
       }
     });
     request.on("error", reject);
