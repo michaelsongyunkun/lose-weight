@@ -545,7 +545,7 @@ function renderPlan(plan) {
   if (downloadButton) downloadButton.disabled = false;
 
   weekView.innerHTML = `<div class="day-grid">${plan.days.map(renderDay).join("")}</div>${renderGuardrails(plan)}`;
-  shoppingView.innerHTML = `<div class="shopping-grid">${plan.shoppingList.map(renderShoppingGroup).join("")}</div>`;
+  shoppingView.innerHTML = renderShoppingWorkspace(plan);
   prepView.innerHTML = `<div class="prep-list">${plan.batchPrep.map(renderPrep).join("")}</div>${renderGuardrails(plan)}`;
 }
 
@@ -583,6 +583,76 @@ function renderMeal(meal) {
       <ul class="meal-steps">${meal.steps.map((step) => `<li>${escapeHtml(step)}</li>`).join("")}</ul>
     </article>
   `;
+}
+
+function renderShoppingWorkspace(plan) {
+  return `
+    <div class="shopping-workspace">
+      <div class="shopping-main-column">
+        <div class="shopping-grid">${(plan.shoppingList || []).map(renderShoppingGroup).join("")}</div>
+      </div>
+      ${renderShoppingOverview(plan)}
+    </div>
+  `;
+}
+
+function renderShoppingOverview(plan) {
+  const stats = summarizeShoppingList(plan.shoppingList || []);
+  const planDays = Array.isArray(plan.days) && plan.days.length ? plan.days.length : 7;
+
+  return `
+    <aside class="shopping-summary-panel" aria-label="采购总览">
+      <div class="shopping-summary-head">
+        <p class="eyebrow">Shopping Board</p>
+        <h3>采购总览</h3>
+        <span>${planDays} 天备餐</span>
+      </div>
+      <div class="shopping-metric-grid">
+        <span><strong>${stats.itemCount}</strong><small>采购项</small></span>
+        <span><strong>${stats.categoryCount}</strong><small>分类</small></span>
+        <span><strong>${formatCurrency(stats.totalCost)}</strong><small>估算总价</small></span>
+        <span><strong>${stats.nutritionMatchedCount}/${stats.itemCount}</strong><small>营养可查</small></span>
+      </div>
+      <div class="shopping-summary-note">
+        <strong>采购整体营养</strong>
+        <span>点击左侧“营养”后，只展开按购买克重估算的整体营养，RAG 命中细节继续隐藏。</span>
+      </div>
+      <ul class="shopping-category-list">
+        ${stats.categories.map((entry) => `
+          <li>
+            <span>${escapeHtml(entry.category)}</span>
+            <strong>${entry.count} 项</strong>
+          </li>
+        `).join("")}
+      </ul>
+    </aside>
+  `;
+}
+
+function summarizeShoppingList(groups = []) {
+  const categories = groups.map((group) => ({
+    category: group.category || "未分类",
+    count: group.items?.length || 0
+  }));
+  const items = groups.flatMap((group) => group.items || []);
+
+  return {
+    categoryCount: groups.length,
+    itemCount: items.length,
+    totalCost: items.reduce((sum, item) => sum + numericCost(item.estimatedCost), 0),
+    nutritionMatchedCount: items.filter((item) => item.nutritionStatus === "matched" || item.rag?.name).length,
+    categories
+  };
+}
+
+function numericCost(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function formatCurrency(value) {
+  if (!Number.isFinite(value) || value <= 0) return "待估";
+  return `¥${Math.round(value)}`;
 }
 
 function renderShoppingGroup(group, groupIndex) {

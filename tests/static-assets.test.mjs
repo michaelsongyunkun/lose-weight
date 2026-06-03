@@ -207,6 +207,22 @@ test("shopping nutrition renderer only shows purchase-level totals", async () =>
   assert.doesNotMatch(renderer[0], /RAG/);
 });
 
+test("shopping output fills the right rail with a purchase overview", async () => {
+  const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
+  const css = await readFile(new URL("../public/styles.css", import.meta.url), "utf8");
+
+  assert.match(app, /function renderShoppingWorkspace/);
+  assert.match(app, /function renderShoppingOverview/);
+  assert.match(app, /shopping-summary-panel/);
+  assert.match(app, /采购总览/);
+  assert.match(app, /估算总价/);
+  assert.match(app, /class="shopping-main-column"/);
+  assert.match(css, /\.shopping-workspace/);
+  assert.match(css, /\.shopping-main-column/);
+  assert.match(css, /\.shopping-summary-panel/);
+  assert.match(css, /\.shopping-metric-grid/);
+});
+
 test("planning screen keeps the DeepSeek agent panel but hides the system prompt", async () => {
   const html = await readFile(new URL("../public/index.html", import.meta.url), "utf8");
   const app = await readFile(new URL("../public/app.js", import.meta.url), "utf8");
